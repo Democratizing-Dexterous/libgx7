@@ -7,10 +7,13 @@ import numpy as np
 
 from motors import CAN, RobotMotors
 from utils.utils import set_high_priority, precise_sleep
-from utils.utils import MotorMITCmd, MotorPVTCmd
+from utils.utils import MotorMITCmd, MotorPVTCmd, MotorPVCmd
 
-MODE_MIT = 1
-MODE_PVT = 4
+from .kinematics import Kinematics
+
+MODE_MIT = 1 # MIT模式
+MODE_PV = 2 # 位置限速模式
+MODE_PVT = 4 # 力位混合模式
 
 DEFAULT_MODE = MODE_PVT # 初始默认模式为PVT
 
@@ -22,6 +25,7 @@ class ControlState:
 
 class Robot:
     def __init__(self, freq=300):
+        self.kin = Kinematics()
         self.control_state = ControlState()
         can = CAN()
         self.freq = freq
@@ -33,6 +37,9 @@ class Robot:
 
         init_pvt_cmd_params = [[0] * self.num_dof]*3
         self.motors_pvt_cmd = MotorPVTCmd(*init_pvt_cmd_params)
+
+        init_pv_cmd_params = [[0] * self.num_dof]*2
+        self.motors_pv_cmd = MotorPVCmd(*init_pv_cmd_params)
 
         # 设置默认模式
         self.robot_motors.write_control_mode_all(DEFAULT_MODE)
@@ -46,8 +53,8 @@ class Robot:
             return
         else:
             # 从pvt切换到mit，先获取切换前位置，然后设置MIT控制位保持当前位置
-            positions = self.getP()
-            self.setP(positions)
+            positions = self.getJP()
+            self.setJP(positions)
 
             # 先复制prev control state
             self.control_state.prev_control_state = (
@@ -61,8 +68,8 @@ class Robot:
             return
         else:
             # 从mit切换到pvt，先获取切换前位置，然后设置PVT控制位保持当前位置
-            positions = self.getP()
-            self.setPVT(positions, [0] * len(positions), [0.6] * len(positions))
+            positions = self.getJP()
+            self.setJPVT(positions, [0] * len(positions), [0.6] * len(positions))
 
             # 先复制prev control state
             self.control_state.prev_control_state = (
@@ -70,6 +77,21 @@ class Robot:
             )
             # 然后设置current为MIT
             self.control_state.current_control_state = MODE_PVT
+
+    def switch_pv(self):
+        if self.control_state.current_control_state == MODE_PV:
+            return
+        else:
+            # 从mit切换到pvt，先获取切换前位置，然后设置PVT控制位保持当前位置
+            positions = self.getJP()
+            self.setJPV(positions, [0.5] * len(positions))
+
+            # 先复制prev control state
+            self.control_state.prev_control_state = (
+                self.control_state.current_control_state
+            )
+            # 然后设置current为MIT
+            self.control_state.current_control_state = MODE_PV
 
     def load_global_motors_status(self, global_motors_status):
         self.global_motors_status = global_motors_status
@@ -91,27 +113,37 @@ class Robot:
             for m in self.global_motors_status.timestamps
         ]
 
-    def getP(self):
+
+    def fk(self, joint_positions):
+        return self.kin.fk(joint_positions)
+    
+    def ik(self, position, orientation, num_iters=100, threshold=1e-3):
+        return self.kin.ik(position, orientation, num_iters=100, threshold=1e-3)
+
+    def jac(self, joint_positions):
+        return self.kin.jac(joint_positions)
+
+    def getJP(self):
         return self.global_motors_status.positions
 
-    def getV(self):
+    def getJV(self):
         return self.global_motors_status.velocities
 
-    def getT(self):
+    def getJT(self):
         return self.global_motors_status.torques
 
     ###############################
     ### MIT Mode ##################
     ###############################
 
-    def setP(self, positions):
+    def setJP(self, positions):
         self.motors_mit_cmd.positions = positions
         self.motors_mit_cmd.velocities = [0] * len(positions)
         self.motors_mit_cmd.torques = [0] * len(positions)
-        self.motors_mit_cmd.kps = [1] * len(positions)
-        self.motors_mit_cmd.kds = [1] * len(positions)
+        self.motors_mit_cmd.kps = [10] * len(positions)
+        self.motors_mit_cmd.kds = [2] * len(positions)
 
-    def setT(self, torques):
+    def setJT(self, torques):
         self.motors_mit_cmd.torques = torques
         self.motors_mit_cmd.velocities = [0] * len(positions)
         self.motors_mit_cmd.torques = [0] * len(positions)
@@ -132,7 +164,7 @@ class Robot:
     ### PVT Mode ##################
     ###############################
 
-    def setPVT(self, positions, velocities, torques):
+    def setJPVT(self, positions, velocities, torques):
         """
         set position, velocity, torque (%, percentage) for all motors
         """
@@ -148,6 +180,32 @@ class Robot:
         torques = self.motors_pvt_cmd.torques
 
         return self.robot_motors.set_motor_pvt_all(ids, poss, vels, torques)
+
+    ###############################
+    ### PV Mode ##################
+    ###############################
+
+    def setJPV(self, positions, velocities):
+        """
+        set position, velocity (limit) for all motors
+        """
+
+        self.motors_pv_cmd.positions = positions
+        self.motors_pv_cmd.velocities = velocities
+
+    def pv_cmd(self):
+        ids = list(np.arange(1, self.num_dof + 1))
+        poss = self.motors_pv_cmd.positions
+        vels = self.motors_pv_cmd.velocities
+
+        return self.robot_motors.set_motor_pv_all(ids, poss, vels)
+    
+
+    def enable(self):
+        return self.robot_motors.enable_all()
+    
+    def disable(self):
+        return self.robot_motors.disable_all()
 
     def run(self):
         robot_motors = self.robot_motors
@@ -193,6 +251,8 @@ class Robot:
             elif self.control_state.current_control_state == MODE_PVT:
                 # print('pvt control')
                 feedbacks_all = self.pvt_cmd()
+            elif self.control_state.current_control_state == MODE_PV:
+                feedbacks_all = self.pv_cmd()
 
             self.update_status(feedbacks_all)
             # print('updated..')
@@ -212,6 +272,6 @@ class Robot:
             # 每1000次循环输出实际频率
             if iterations % 1000 == 0:
                 actual_freq = iterations / (time.perf_counter() - start_time)
-                # print(f"实际频率: {actual_freq:.2f} Hz")
+                print(f"实际频率: {actual_freq:.2f} Hz")
                 iterations = 0
                 start_time = time.perf_counter()

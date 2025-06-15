@@ -64,3 +64,12 @@ class MotorPVTCmd:
     positions: list
     velocities: list
     torques: list
+
+@dataclass
+class MotorPVCmd:
+    """
+    PV模式下的电机指令数据类
+    """
+
+    positions: list
+    velocities: list

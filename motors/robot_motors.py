@@ -1,7 +1,7 @@
 import os
 import yaml
 
-from .motor import CAN, extract_feedback_frame, make_mit_frame, make_pvt_frame
+from .motor import CAN, extract_feedback_frame, make_mit_frame, make_pvt_frame, make_pv_frame
 
 abs_path = os.path.abspath(__file__)
 
@@ -85,6 +85,20 @@ class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVd
         feedbacks_all = []
         for id, pos, vel, torque in zip(ids, poss, vels, torques):
             feedback_frame = self.set_motor_pvt(id, pos, vel, torque)
+            feedbacks_all.append(feedback_frame)
+        return feedbacks_all
+
+    def set_motor_pv(self, id, pos, vel):
+        pv_control_frame = make_pv_frame(pos, vel)
+        feedback_frame = self.can.send_frame(id + 0x100, pv_control_frame)
+        return extract_feedback_frame(
+            MOTOR_TYPES, MOTOR_CONFIGS[id - 1], feedback_frame
+        )
+
+    def set_motor_pv_all(self, ids, poss, vels):
+        feedbacks_all = []
+        for id, pos, vel in zip(ids, poss, vels):
+            feedback_frame = self.set_motor_pv(id, pos, vel)
             feedbacks_all.append(feedback_frame)
         return feedbacks_all
 

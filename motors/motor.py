@@ -228,3 +228,11 @@ def make_pvt_frame(pos, vel, torque):
     pos_bytes = list(struct.pack("<f", pos))
 
     return pos_bytes + vel_bytes + torque_bytes
+
+
+def make_pv_frame(pos, vel):
+    pos_bytes = list(struct.pack("<f", pos))
+    vel_bytes = list(struct.pack("<f", vel))
+
+    return pos_bytes + vel_bytes
+

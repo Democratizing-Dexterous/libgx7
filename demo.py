@@ -19,15 +19,26 @@ threading_robot_run.start()
 
 dt = 1 / FREQ
 
-start_t = time.time()
 
+time.sleep(1)
 
-while True:
-    robot.setPVT([-0.6, 0.1, -0.3], [1, 1, 1], [0.1, 0.1, 0.1])
-    time.sleep(3)
-    
-    robot.setPVT([0.6, 1.2, 1.3], [1, 1, 1], [0.1, 0.1, 0.1])
-    time.sleep(3)
+robot.setJPVT([0.3, 1.2, 0.6], [0.5]*3, [0.1]*3)
+# start_t = time.time()
+
+# robot.switch_pv()
+
+# while True:
+#     robot.setPV([-0.3, 0.2, -0.6], [0.5]*3)
+#     time.sleep(3)
+#     robot.setPV([0.3, 1.2, 0.6], [0.5]*3)
+
+#     time.sleep(3)
+
+# start_t = time.time()
+# while True:
+#     t = time.time() - start_t
+#     robot.setPVT([1.5*np.sin(2*t), 1.2*np.sin(2*t) + 0.9, 1.2*np.sin(t)], [0.5, 0.5, 0.5], [0.1, 0.1, 0.1])
+#     time.sleep(dt)
 
 # robot.switch_mit()
 # print(robot.getP())
