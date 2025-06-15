@@ -3,14 +3,18 @@ motor_types:
     pmax: 12.5  
     vmax: 30.0 
     tmax: 10.0  
+  dmj4340:
+    pmax: 12.5  
+    vmax: 30.0 
+    tmax: 10.0  
 
 robot_config:
   num_motors: 7
   motor_configs:
-    - dmj4310
-    - dmj4310
-    - dmj4310
-    - dmj4310
+    - dmj4340
+    - dmj4340
+    - dmj4340
+    - dmj4340
     - dmj4310
     - dmj4310
     - dmj4310
