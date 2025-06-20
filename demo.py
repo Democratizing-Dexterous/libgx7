@@ -22,7 +22,7 @@ dt = 1 / FREQ
 
 time.sleep(1)
 
-robot.setJPVT([0.3, 1.2, 0.6], [0.5]*3, [0.1]*3)
+# robot.setJPVT([0.3, 1.2, 0.6], [0.5]*3, [0.1]*3)
 # start_t = time.time()
 
 # robot.switch_pv()

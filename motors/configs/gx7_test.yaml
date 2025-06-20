@@ -9,7 +9,7 @@ motor_types:
     tmax: 28.0  
 
 robot_config:
-  num_motors: 3
+  num_motors: 7
   motor_configs:
     - dmj4340
     - dmj4340

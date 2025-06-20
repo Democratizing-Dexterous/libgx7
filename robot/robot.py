@@ -15,7 +15,7 @@ MODE_MIT = 1 # MIT模式
 MODE_PV = 2 # 位置限速模式
 MODE_PVT = 4 # 力位混合模式
 
-DEFAULT_MODE = MODE_PVT # 初始默认模式为PVT
+DEFAULT_MODE = MODE_PV # 初始默认模式
 
 @dataclass
 class ControlState:
@@ -95,6 +95,9 @@ class Robot:
 
     def load_global_motors_status(self, global_motors_status):
         self.global_motors_status = global_motors_status
+        
+    def get_status(self):
+        return self.global_motors_status
 
     def update_status(self, feedbacks_all):
         # global_motors_status is global and need to be modified
@@ -107,7 +110,8 @@ class Robot:
         self.global_motors_status.temp_rotors = [f["temp_rotor"] for f in feedbacks_all]
         self.global_motors_status.timestamps = [f["timestamp"] for f in feedbacks_all]
 
-    def get_delay_ms(self):
+    def get_delay(self):
+        """unit: ms"""
         return [
             (time.perf_counter() - m) * 1000
             for m in self.global_motors_status.timestamps
@@ -145,10 +149,10 @@ class Robot:
 
     def setJT(self, torques):
         self.motors_mit_cmd.torques = torques
-        self.motors_mit_cmd.velocities = [0] * len(positions)
-        self.motors_mit_cmd.torques = [0] * len(positions)
-        self.motors_mit_cmd.kps = [0] * len(positions)
-        self.motors_mit_cmd.kds = [0] * len(positions)
+        self.motors_mit_cmd.velocities = [0] * len(torques)
+        self.motors_mit_cmd.torques = [0] * len(torques)
+        self.motors_mit_cmd.kps = [0] * len(torques)
+        self.motors_mit_cmd.kds = [0] * len(torques)
 
     def mit_cmd(self):
         ids = list(np.arange(1, self.num_dof + 1))
@@ -185,6 +189,12 @@ class Robot:
     ### PV Mode ##################
     ###############################
 
+    
+    # def setJPV(self, id, pos, vel):
+    #     self.motors_pv_cmd.positions[id-1] = pos
+    #     self.motors_pv_cmd.velocities[id-1] = vel
+
+    
     def setJPV(self, positions, velocities):
         """
         set position, velocity (limit) for all motors
@@ -192,6 +202,8 @@ class Robot:
 
         self.motors_pv_cmd.positions = positions
         self.motors_pv_cmd.velocities = velocities
+        
+    
 
     def pv_cmd(self):
         ids = list(np.arange(1, self.num_dof + 1))
@@ -207,6 +219,7 @@ class Robot:
     def disable(self):
         return self.robot_motors.disable_all()
 
+
     def run(self):
         robot_motors = self.robot_motors
 
@@ -220,6 +233,7 @@ class Robot:
         iterations = 0
 
         # 失能所有电机
+        robot_motors.clear_error_all()
         feedbacks_all = robot_motors.disable_all()
         self.update_status(feedbacks_all)
         time.sleep(1)
@@ -247,7 +261,7 @@ class Robot:
             # 执行任务，通过判断模式，发送不同的can指令
             if self.control_state.current_control_state == MODE_MIT:
                 # print('mit control')
-                feedbacks_all = self.mit_cmd()
+                 feedbacks_all = self.mit_cmd()
             elif self.control_state.current_control_state == MODE_PVT:
                 # print('pvt control')
                 feedbacks_all = self.pvt_cmd()

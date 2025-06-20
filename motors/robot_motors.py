@@ -32,6 +32,10 @@ class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVd
             MOTOR_TYPES, MOTOR_CONFIGS[id - 1], feedback_frame
         )  # id start from 1
 
+    def set_zero_all(self):
+        for id in range(1, self.num_motors + 1):
+            self.set_zero(id)
+
     def disable_motor(self, id):
         feedback_frame = self.can.send_frame(id, [0xFF] * 7 + [0xFD])  # disable frame
         return extract_feedback_frame(
@@ -43,6 +47,14 @@ class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVd
         return extract_feedback_frame(
             MOTOR_TYPES, MOTOR_CONFIGS[id - 1], feedback_frame
         )
+        
+    def clear_error(self, id):
+        self.can.send_frame(id, [0xFF] * 7 + [0xFB])
+        
+    def clear_error_all(self):
+        for id in range(1, self.num_motors + 1):
+            self.clear_error(id)
+        
 
     def enable_all(self):
         feedbacks_all = []
