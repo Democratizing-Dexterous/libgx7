@@ -6,7 +6,7 @@ import numpy as np
 from robot.robot import Robot
 from utils.utils import MotorStatus
 
-FREQ = 300  # Hz
+FREQ = 100  # Hz
 robot = Robot(FREQ)
 
 init_motors_status_params = [[0]*robot.num_dof]*8
@@ -17,10 +17,10 @@ threading_robot_run = threading.Thread(target=robot.run)
 threading_robot_run.daemon = True
 threading_robot_run.start()
 
-dt = 1 / FREQ
+# dt = 1 / FREQ
 
 
-time.sleep(1)
+# time.sleep(1)
 
 # robot.setJPVT([0.3, 1.2, 0.6], [0.5]*3, [0.1]*3)
 # start_t = time.time()

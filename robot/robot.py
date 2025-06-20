@@ -5,7 +5,7 @@ import os
 from dataclasses import dataclass
 import numpy as np
 
-from motors import CAN, RobotMotors
+from motors import VCICAN, SOLCAN, RobotMotors
 from utils.utils import set_high_priority, precise_sleep
 from utils.utils import MotorMITCmd, MotorPVTCmd, MotorPVCmd
 
@@ -27,7 +27,7 @@ class Robot:
     def __init__(self, freq=300):
         self.kin = Kinematics()
         self.control_state = ControlState()
-        can = CAN()
+        can = SOLCAN()
         self.freq = freq
         self.robot_motors = RobotMotors(can)
         self.num_dof = self.robot_motors.num_motors
@@ -224,7 +224,7 @@ class Robot:
         robot_motors = self.robot_motors
 
         # 设置高优先级
-        set_high_priority()
+        # set_high_priority()
 
         period = 1.0 / self.freq
 
@@ -242,50 +242,55 @@ class Robot:
         feedbacks_all = robot_motors.enable_all()
         self.update_status(feedbacks_all)
 
-        while True: # 注意所有can的使用都必须在同一个线程里面
-            # 记录循环开始时间
-            loop_start = time.perf_counter()
+        try:
+            while True: # 注意所有can的使用都必须在同一个线程里面
+                # 记录循环开始时间
+                loop_start = time.perf_counter()
 
-            # 判断是否切换模式，如果切换，则control_state内有差异
-            if (
-                self.control_state.current_control_state
-                != self.control_state.prev_control_state
-            ):
-                self.robot_motors.write_control_mode_all(
+                # 判断是否切换模式，如果切换，则control_state内有差异
+                if (
                     self.control_state.current_control_state
-                )  # 切换模式
-                self.control_state.prev_control_state = (
-                    self.control_state.current_control_state
-                )  # 切换之后更新，control_state内无差异
+                    != self.control_state.prev_control_state
+                ):
+                    self.robot_motors.write_control_mode_all(
+                        self.control_state.current_control_state
+                    )  # 切换模式
+                    self.control_state.prev_control_state = (
+                        self.control_state.current_control_state
+                    )  # 切换之后更新，control_state内无差异
 
-            # 执行任务，通过判断模式，发送不同的can指令
-            if self.control_state.current_control_state == MODE_MIT:
-                # print('mit control')
-                 feedbacks_all = self.mit_cmd()
-            elif self.control_state.current_control_state == MODE_PVT:
-                # print('pvt control')
-                feedbacks_all = self.pvt_cmd()
-            elif self.control_state.current_control_state == MODE_PV:
-                feedbacks_all = self.pv_cmd()
+                # 执行任务，通过判断模式，发送不同的can指令
+                if self.control_state.current_control_state == MODE_MIT:
+                    # print('mit control')
+                    feedbacks_all = self.mit_cmd()
+                elif self.control_state.current_control_state == MODE_PVT:
+                    # print('pvt control')
+                    feedbacks_all = self.pvt_cmd()
+                elif self.control_state.current_control_state == MODE_PV:
+                    feedbacks_all = self.pv_cmd()
 
-            self.update_status(feedbacks_all)
-            # print('updated..')
+                self.update_status(feedbacks_all)
+                # print('updated..')
 
-            # 计算已经使用的时间
-            elapsed = time.perf_counter() - loop_start
+                # 计算已经使用的时间
+                elapsed = time.perf_counter() - loop_start
 
-            # 计算需要等待的时间以保持频率
-            sleep_time = period - elapsed
+                # 计算需要等待的时间以保持频率
+                sleep_time = period - elapsed
 
-            # 如果还有时间，则进行精确睡眠
-            if sleep_time > 0:
-                precise_sleep(sleep_time)
+                # 如果还有时间，则进行精确睡眠
+                if sleep_time > 0:
+                    precise_sleep(sleep_time)
 
-            iterations += 1
+                iterations += 1
 
-            # 每1000次循环输出实际频率
-            if iterations % 1000 == 0:
-                actual_freq = iterations / (time.perf_counter() - start_time)
-                print(f"实际频率: {actual_freq:.2f} Hz")
-                iterations = 0
-                start_time = time.perf_counter()
+                # 每1000次循环输出实际频率
+                if iterations % 1000 == 0:
+                    actual_freq = iterations / (time.perf_counter() - start_time)
+                    # print(f"实际频率: {actual_freq:.2f} Hz")
+                    iterations = 0
+                    start_time = time.perf_counter()
+        
+        # print error
+        except Exception as e:
+            print(e)

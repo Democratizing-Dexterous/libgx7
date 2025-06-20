@@ -1,7 +1,8 @@
 import os
 import yaml
 
-from .motor import CAN, extract_feedback_frame, make_mit_frame, make_pvt_frame, make_pv_frame
+from .can import VCICAN, SOLCAN
+from .dm_utils import *
 
 abs_path = os.path.abspath(__file__)
 
@@ -23,7 +24,7 @@ MOTOR_CONFIGS = gx7_configs["robot_config"]["motor_configs"]
 class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVdnzb
     def __init__(self, can):
         self.can = can
-        self.can.initCan1()
+        self.can.init_can()
         self.num_motors = NUM_MOTORS
 
     def set_zero(self, id):
