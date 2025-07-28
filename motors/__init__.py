@@ -1,2 +1,2 @@
-from .can import VCICAN, SOLCAN
+from .can import VCICAN
 from .robot_motors import RobotMotors

@@ -1,7 +1,7 @@
 import os
 import yaml
 
-from .can import VCICAN, SOLCAN
+from .can import VCICAN
 from .dm_utils import *
 
 abs_path = os.path.abspath(__file__)
@@ -19,18 +19,20 @@ gx7_configs = load_config(
 MOTOR_TYPES = gx7_configs["motor_types"]
 NUM_MOTORS = gx7_configs["robot_config"]["num_motors"]
 MOTOR_CONFIGS = gx7_configs["robot_config"]["motor_configs"]
-
+MOTOR_NAMES = [c['type'] for c in MOTOR_CONFIGS]
+MOTOR_LIMITS = [[c['limits']['position']['lower'], c['limits']['position']['upper']] for c in MOTOR_CONFIGS]
 
 class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVdnzb
     def __init__(self, can):
         self.can = can
         self.can.init_can()
         self.num_motors = NUM_MOTORS
+        self.motor_limits = MOTOR_LIMITS
 
     def set_zero(self, id):
         feedback_frame = self.can.send_frame(id, [0xFF] * 7 + [0xFE])  # zero frame
         return extract_feedback_frame(
-            MOTOR_TYPES, MOTOR_CONFIGS[id - 1], feedback_frame
+            MOTOR_TYPES, MOTOR_NAMES[id - 1], feedback_frame
         )  # id start from 1
 
     def set_zero_all(self):
@@ -40,13 +42,13 @@ class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVd
     def disable_motor(self, id):
         feedback_frame = self.can.send_frame(id, [0xFF] * 7 + [0xFD])  # disable frame
         return extract_feedback_frame(
-            MOTOR_TYPES, MOTOR_CONFIGS[id - 1], feedback_frame
+            MOTOR_TYPES, MOTOR_NAMES[id - 1], feedback_frame
         )  # id start from 1
 
     def enable_motor(self, id):
         feedback_frame = self.can.send_frame(id, [0xFF] * 7 + [0xFC])  # enable frame
         return extract_feedback_frame(
-            MOTOR_TYPES, MOTOR_CONFIGS[id - 1], feedback_frame
+            MOTOR_TYPES, MOTOR_NAMES[id - 1], feedback_frame
         )
         
     def clear_error(self, id):
@@ -73,11 +75,11 @@ class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVd
 
     def set_motor_mit(self, id, pos, vel, kp, kd, torque):
         torq_control_frame = make_mit_frame(
-            MOTOR_TYPES, MOTOR_CONFIGS[id - 1], pos, vel, kp, kd, torque
+            MOTOR_TYPES, MOTOR_NAMES[id - 1], pos, vel, kp, kd, torque
         )
         feedback_frame = self.can.send_frame(id, torq_control_frame)
         return extract_feedback_frame(
-            MOTOR_TYPES, MOTOR_CONFIGS[id - 1], feedback_frame
+            MOTOR_TYPES, MOTOR_NAMES[id - 1], feedback_frame
         )
 
     def set_motor_mit_all(self, ids, poss, vels, kps, kds, torques):
@@ -91,7 +93,7 @@ class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVd
         pvt_control_frame = make_pvt_frame(pos, vel, torque)
         feedback_frame = self.can.send_frame(id + 0x300, pvt_control_frame)
         return extract_feedback_frame(
-            MOTOR_TYPES, MOTOR_CONFIGS[id - 1], feedback_frame
+            MOTOR_TYPES, MOTOR_NAMES[id - 1], feedback_frame
         )
 
     def set_motor_pvt_all(self, ids, poss, vels, torques):
@@ -105,7 +107,7 @@ class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVd
         pv_control_frame = make_pv_frame(pos, vel)
         feedback_frame = self.can.send_frame(id + 0x100, pv_control_frame)
         return extract_feedback_frame(
-            MOTOR_TYPES, MOTOR_CONFIGS[id - 1], feedback_frame
+            MOTOR_TYPES, MOTOR_NAMES[id - 1], feedback_frame
         )
 
     def set_motor_pv_all(self, ids, poss, vels):

@@ -2,6 +2,7 @@ from ctypes import *
 import os
 import time
 import numpy as np
+import serial
 
 abs_path = os.path.abspath(__file__)
 
@@ -45,12 +46,24 @@ class VCI_CAN_OBJ_ARRAY(Structure):
 
 
 class VCICAN:
-    def __init__(self):
-        # win x64 dll
-        self.lib_can_path = os.path.join(
-            os.path.dirname(abs_path), "libs/ControlCAN.dll"
-        )
-        self.usbcan = windll.LoadLibrary(self.lib_can_path)
+    def __init__(self, platform='win'):
+         
+        if platform == 'win':
+            # win x64 dll
+            self.lib_can_path = os.path.join(
+                os.path.dirname(abs_path), "libs/ControlCAN.dll"
+            )
+            self.usbcan = windll.LoadLibrary(self.lib_can_path)
+        elif platform == 'linux':
+            # linux so
+            self.lib_can_path = os.path.join(
+                os.path.dirname(abs_path), "libs/libusb_can.so"
+            )
+            self.usbcan = cdll.LoadLibrary(self.lib_can_path)
+            
+        else:
+            print('Not supported OS!!!')
+            os._exit(0)
 
     def init_can(self):
         vci_initconfig = VCI_INIT_CONFIG(
@@ -120,93 +133,55 @@ class VCICAN:
         return control_mode
 
 
-#### for SOULDE usb2can, for linux
 
-FRAME_lENGTH = 8
-# 定义结构体，与C中的FrameInfo对应
-class FrameInfo(Structure):
-    _fields_ = [
-        ("canID", c_uint32),
-        ("frameType", c_uint8),
-        ("dataLength", c_uint8)
-    ]
-    _pack_ = 1  # 保证与C结构体相同的内存对齐方式
+#### for serial2can
+class SerialCAN:
 
-class SOLCAN:
-    def __init__(self, dev_name='/dev/USB2CAN0'):
-        # linux so
-        self.lib_can_path = os.path.join(
-            os.path.dirname(abs_path), "libs/libusb_can.so"
-        )
-        self.usbcan = cdll.LoadLibrary(self.lib_can_path)
+    send_data_frame = np.array(
+        [0x55, 0xAA, 0x1e, 0x03, 0x01, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0, 0, 0, 0, 0x00, 0x08, 0x00,
+         0x00, 0, 0, 0, 0, 0, 0, 0, 0, 0x00], np.uint8)
 
-
-        self.usbcan.openUSBCAN.argtypes = [c_char_p]
-        self.usbcan.openUSBCAN.restype = c_int32
-
-        self.usbcan.closeUSBCAN.argtypes = [c_int32]
-        self.usbcan.closeUSBCAN.restype = c_int32
-
-        self.usbcan.sendUSBCAN.argtypes = [c_int32, c_uint8, POINTER(FrameInfo), POINTER(c_uint8)]
-        self.usbcan.sendUSBCAN.restype = c_int32
-
-        self.usbcan.readUSBCAN.argtypes = [c_int32, POINTER(c_uint8), POINTER(FrameInfo), POINTER(c_uint8), c_int32]
-        self.usbcan.readUSBCAN.restype = c_int32
-
+    def __init__(self, dev_name='/dev/ttyUSB0'):
         self.dev_name = dev_name
-    
-    def init_can(self):
-        self.dev_handle = self.usbcan.openUSBCAN(self.dev_name.encode('utf-8'))
-        if self.dev_handle > 0:
-            print("SOL_OpenDevice successed!")
-        else:
-            print("SOL_OpenDevice error!")
-            os._exit(0)
+        self.serial = serial.Serial(self.dev_name, 921600, timeout=0.5)
+
+        self.data_save = bytes()  # save data
 
     def send_frame(self, id, hex_list, timeout=0):
-        if self.dev_handle < 0:
-            raise RuntimeError("Device not opened")
-        
-        frame_info = FrameInfo()
-        frame_info.canID = id
-        frame_info.frameType = 0
-        frame_info.dataLength = FRAME_lENGTH
-        
-        # data转换成uinit8_t*
-        data_array = (c_uint8 * len(hex_list))(*hex_list)
+        self.send_data_frame[13] = id & 0xff
+        self.send_data_frame[14] = (id >> 8)& 0xff  #id high 8 bits
+
+        data = np.array(hex_list, np.uint8)
+
+        self.send_data_frame[21:29] = data
+        self.serial.write(bytes(self.send_data_frame.T))
+
+    def recv(self):
+        # 把上次没有解析完的剩下的也放进来
+        data_recv = b''.join([self.data_save, self.serial_.read_all()])
+        packets = self.__extract_packets(data_recv)
+        for packet in packets:
+            data = packet[7:15]
+            CANID = (packet[6] << 24) | (packet[5] << 16) | (packet[4] << 8) | packet[3]
+            CMD = packet[1]
+            self.__process_packet(data, CANID, CMD)
     
-        send_ret = self.usbcan.sendUSBCAN(self.dev_handle, 1, byref(frame_info), data_array) # 使用通道1发送
+    def __extract_packets(self, data):
+        frames = []
+        header = 0xAA
+        tail = 0x55
+        frame_length = 16
+        i = 0
+        remainder_pos = 0
 
-        data_buffer = (c_uint8 * FRAME_lENGTH)()
-        channel = c_uint8(0)
-
-        if send_ret == 17:
-            while True:
-                read_ret = self.usbcan.readUSBCAN(self.dev_handle, byref(channel), byref(frame_info), data_buffer, 1000)
-                if read_ret == 0:
-                    return list(data_buffer)
-
-    def read_control_mode(self, id, max_retry=20):
-        control_mode = 0
-        for i in range(max_retry):
-            feedback_frame = self.send_frame(0x7FF, [id, 0x00, 0x33, 0x0A] + [0x00] * 4)
-            if feedback_frame[0] == id:  # match
-                control_mode = int.from_bytes(feedback_frame[4:8], byteorder="little")
-                break
-            time.sleep(0.1)
-        return control_mode
-
-    def write_control_mode(self, id, mode, max_retry=20):
-        control_mode = 0
-        mode = int.to_bytes(mode, 4, byteorder="little")
-        for i in range(max_retry):
-            feedback_frame = self.send_frame(0x7FF, [id, 0x00, 0x55, 0x0A] + list(mode))
-            if feedback_frame[0] == id:  # match
-                control_mode = int.from_bytes(feedback_frame[4:8], byteorder="little")
-                break
-            time.sleep(0.1)
-        return control_mode
-
-if __name__ == "__main__":
-    can = SOLCAN()
-    can.init_can()
+        while i <= len(data) - frame_length:
+            if data[i] == header and data[i + frame_length - 1] == tail:
+                frame = data[i:i + frame_length]
+                frames.append(frame)
+                i += frame_length
+                remainder_pos = i
+            else:
+                i += 1
+        self.data_save = data[remainder_pos:]
+        return frames
+ 

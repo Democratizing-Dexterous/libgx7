@@ -1,3 +1,4 @@
+import enum
 import time
 import threading
 import platform
@@ -5,7 +6,7 @@ import os
 from dataclasses import dataclass
 import numpy as np
 
-from motors import VCICAN, SOLCAN, RobotMotors
+from motors import VCICAN, RobotMotors
 from utils.utils import set_high_priority, precise_sleep
 from utils.utils import MotorMITCmd, MotorPVTCmd, MotorPVCmd
 
@@ -15,7 +16,7 @@ MODE_MIT = 1 # MIT模式
 MODE_PV = 2 # 位置限速模式
 MODE_PVT = 4 # 力位混合模式
 
-DEFAULT_MODE = MODE_PV # 初始默认模式
+DEFAULT_MODE = MODE_PVT # 初始默认模式
 
 @dataclass
 class ControlState:
@@ -24,13 +25,14 @@ class ControlState:
 
 
 class Robot:
-    def __init__(self, freq=300):
+    def __init__(self, freq=300, platform='win'):
         self.kin = Kinematics()
         self.control_state = ControlState()
-        can = SOLCAN()
+        can = VCICAN(platform)
         self.freq = freq
         self.robot_motors = RobotMotors(can)
         self.num_dof = self.robot_motors.num_motors
+        self.motor_limits = self.robot_motors.motor_limits
 
         init_mit_cmd_params = [[0] * self.num_dof]*5
         self.motors_mit_cmd = MotorMITCmd(*init_mit_cmd_params)
@@ -127,6 +129,43 @@ class Robot:
     def jac(self, joint_positions):
         return self.kin.jac(joint_positions)
 
+
+    def check_joint_limits(self):
+        """
+        检查关节位置和速度是否超出限制
+        """
+        jps = self.global_motors_status.positions
+        for i, jp in enumerate(jps):
+            if jp < self.motor_limits[i][0]*np.pi/180 or jp > self.motor_limits[i][1]*np.pi/180:
+                info = f'第{i+1}关节超出位置限制！请拖动到合理范围然后重新启动程序'
+                return False, info
+        return True, ''
+
+    def check_error(self):
+        # 8——超压； 9——欠压；A——过电流； B——MOS 过温；C——电机线圈过温； D——通讯丢失；E——过载；
+        for i, jp in enumerate(self.global_motors_status.states):
+            if jp == 0x8:
+                info = f'第{i+1}关节超压！'
+                return False, info
+            elif jp == 0x9:
+                info = f'第{i+1}关节欠压！'
+                return False, info
+            elif jp == 0xA:
+                info = f'第{i+1}关节过电流！'
+                return False, info
+            elif jp == 0xB:
+                info = f'第{i+1}关节MOS过温！'
+                return False, info
+            elif jp == 0xC:
+                info = f'第{i+1}关节电机线圈过温！'
+                return False, info
+
+        return True, ''
+
+    ###############################
+    ### Joint Info ################
+    ###############################
+
     def getJP(self):
         return self.global_motors_status.positions
 
@@ -135,6 +174,13 @@ class Robot:
 
     def getJT(self):
         return self.global_motors_status.torques
+
+    def getRotorTemp(self):
+        return self.global_motors_status.temp_rotors
+
+    def getMossTemp(self):
+        return self.global_motors_status.temp_moss
+
 
     ###############################
     ### MIT Mode ##################
@@ -150,7 +196,6 @@ class Robot:
     def setJT(self, torques):
         self.motors_mit_cmd.torques = torques
         self.motors_mit_cmd.velocities = [0] * len(torques)
-        self.motors_mit_cmd.torques = [0] * len(torques)
         self.motors_mit_cmd.kps = [0] * len(torques)
         self.motors_mit_cmd.kds = [0] * len(torques)
 
@@ -233,9 +278,10 @@ class Robot:
         iterations = 0
 
         # 失能所有电机
-        robot_motors.clear_error_all()
         feedbacks_all = robot_motors.disable_all()
         self.update_status(feedbacks_all)
+        # 清除错误
+        robot_motors.clear_error_all()
         time.sleep(1)
 
         # 使能所有电机
@@ -246,6 +292,20 @@ class Robot:
             while True: # 注意所有can的使用都必须在同一个线程里面
                 # 记录循环开始时间
                 loop_start = time.perf_counter()
+
+                # 判断关节限位
+                joints_valid, info = self.check_joint_limits()
+                if not joints_valid:
+                    print(info)
+                    robot_motors.disable_all()
+                    break
+
+                # 检查错误
+                error_free, info = self.check_error()
+                if not error_free:
+                    print(info)
+                    robot_motors.disable_all()
+                    break
 
                 # 判断是否切换模式，如果切换，则control_state内有差异
                 if (
@@ -288,6 +348,7 @@ class Robot:
                 if iterations % 1000 == 0:
                     actual_freq = iterations / (time.perf_counter() - start_time)
                     # print(f"实际频率: {actual_freq:.2f} Hz")
+                    # print(self.getMossTemp(), self.getRotorTemp())
                     iterations = 0
                     start_time = time.perf_counter()
         
