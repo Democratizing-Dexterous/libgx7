@@ -1,0 +1,1 @@
+from .robot import Robot as GX7

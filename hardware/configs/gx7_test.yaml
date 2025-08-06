@@ -9,7 +9,7 @@ motor_types:
     tmax: 28.0  
 
 robot_config:
-  num_motors: 4
+  num_motors: 6
   motor_configs:
     - type: dmj4340
       limits:
@@ -29,12 +29,12 @@ robot_config:
     - type: dmj4340
       limits:
         position:
-          lower: -0.0   # custom limit for this specific motor
+          lower: -5.0   # custom limit for this specific motor
           upper: 180.0
     - type: dmj4310
       limits:
         position:
-          lower: 0.0   # custom limit for this specific motor
+          lower: -90.0   # custom limit for this specific motor
           upper: 90.0
     - type: dmj4310
       limits:

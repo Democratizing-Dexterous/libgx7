@@ -5,20 +5,6 @@ from dataclasses import dataclass
 from ctypes import c_double as double
 
 
-def set_high_priority():
-    """设置进程高优先级"""
-    system = platform.system()
-    try:
-        if system == "Windows":
-            import psutil
-
-            p = psutil.Process(os.getpid())
-            p.nice(psutil.HIGH_PRIORITY_CLASS)
-        elif system == "Linux" or system == "Darwin":  # Linux或macOS
-            os.nice(-20)  # 最高优先级，需要root权限
-    except Exception as e:
-        print(f"设置高优先级失败: {e}")
-
 
 def precise_sleep(duration):
     """高精度睡眠函数"""

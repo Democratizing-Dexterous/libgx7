@@ -6,11 +6,9 @@ from .dm_utils import *
 
 abs_path = os.path.abspath(__file__)
 
-
 def load_config(config_file):
     with open(config_file, "r") as file:
         return yaml.safe_load(file)
-
 
 gx7_configs = load_config(
     os.path.join(os.path.dirname(abs_path), "configs/gx7_test.yaml")
@@ -58,7 +56,6 @@ class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVd
         for id in range(1, self.num_motors + 1):
             self.clear_error(id)
         
-
     def enable_all(self):
         feedbacks_all = []
         for id in range(1, self.num_motors + 1):
@@ -120,3 +117,4 @@ class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVd
     def write_control_mode_all(self, mode):
         for i in range(self.num_motors):
             self.can.write_control_mode(i + 1, mode)
+            print(f'Joint {i+1} writing mode done...')
