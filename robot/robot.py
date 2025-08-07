@@ -26,9 +26,9 @@ class Robot:
     def __init__(self, freq=100, platform='win', control_mode='pvt', soft_limit=True):
         self.kin = Kinematics()
         
-        can = VCICAN(platform)
+        self.can = VCICAN(platform)
         self.freq = freq
-        self.robot_motors = RobotMotors(can)
+        self.robot_motors = RobotMotors(self.can)
         self.num_dof = self.robot_motors.num_motors
         self.motor_limits = self.robot_motors.motor_limits
         
@@ -212,6 +212,12 @@ class Robot:
                 return False, info
             elif jp == 0xC:
                 info = f'第{i+1}关节电机线圈过温！'
+                return False, info
+            elif jp == 0xD:
+                info = f'第{i+1}关节通信丢失！'
+                return False, info
+            elif jp == 0xE:
+                info = f'第{i+1}关节过载！'
                 return False, info
 
         return True, ''

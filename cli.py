@@ -1,8 +1,9 @@
 import numpy as np
 from robot import GX7
 
+
 FREQ = 100  # Hz
-robot = GX7(FREQ, 'win')
+robot = GX7(FREQ, 'win', 'pvt')
 robot.run()  # Start the robot thread
 
 dt = 1 / FREQ

@@ -3,6 +3,7 @@ import os
 import time
 import numpy as np
 import serial
+import struct
 
 abs_path = os.path.abspath(__file__)
 
@@ -131,7 +132,124 @@ class VCICAN:
                 break
             time.sleep(0.1)
         return control_mode
+    
+    def read_vel_kp(self, id, max_retry=20):
+        data = 0
+        for i in range(max_retry):
+            feedback_frame = self.send_frame(0x7FF, [id, 0x00, 0x33, 0x19] + [0x00] * 4)
+            if feedback_frame[0] == id:  # match
+                byte_data = bytes(feedback_frame[4:8])
+                data = struct.unpack("<f", byte_data)[0]
+                break
+            time.sleep(0.1)
+        return data
+    
+    
+    
+    def read_vel_ki(self, id, max_retry=20):
+        data = 0
+        for i in range(max_retry):
+            feedback_frame = self.send_frame(0x7FF, [id, 0x00, 0x33, 0x1A] + [0x00] * 4)
+            if feedback_frame[0] == id:  # match
+                byte_data = bytes(feedback_frame[4:8])
+                data = struct.unpack("<f", byte_data)[0]
+                break
+            time.sleep(0.1)
+        return data
+    
+    def read_pos_kp(self, id, max_retry=20):
+        data = 0
+        for i in range(max_retry):
+            feedback_frame = self.send_frame(0x7FF, [id, 0x00, 0x33, 0x1B] + [0x00] * 4)
+            if feedback_frame[0] == id:  # match
+                byte_data = bytes(feedback_frame[4:8])
+                data = struct.unpack("<f", byte_data)[0]
+                break
+            time.sleep(0.1)
+        return data
+    
+    def write_pos_kp(self, id, kp, max_retry=20):
+        data = 0
+        if kp < 0:
+            print('kp must be positive!')
+            return 0
+            
+        for i in range(max_retry):
+            hex = struct.pack("<f", kp)
+            feedback_frame = self.send_frame(0x7FF, [id, 0x00, 0x55, 0x1B] + list(hex))
+            if feedback_frame[0] == id:  # match
+                byte_data = bytes(feedback_frame[4:8])
+                data = struct.unpack("<f", byte_data)[0]
+                break
+            time.sleep(0.1)
+        return data
+    
+    def read_pos_ki(self, id, max_retry=20):
+        data = 0
+        for i in range(max_retry):
+            feedback_frame = self.send_frame(0x7FF, [id, 0x00, 0x33, 0x1C] + [0x00] * 4)
+            if feedback_frame[0] == id:  # match
+                byte_data = bytes(feedback_frame[4:8])
+                data = struct.unpack("<f", byte_data)[0]
+                break
+            time.sleep(0.1)
+        return data
+    
+    def read_acc(self, id, max_retry=20):
+        data = 0
+        for i in range(max_retry):
+            feedback_frame = self.send_frame(0x7FF, [id, 0x00, 0x33, 0x04] + [0x00] * 4)
+            if feedback_frame[0] == id:  # match
+                byte_data = bytes(feedback_frame[4:8])
+                data = struct.unpack("<f", byte_data)[0]
+                break
+            time.sleep(0.1)
+        return data
+    
+    
+    def write_acc(self, id, acc, max_retry=20):
+        data = 0
+        if acc < 0:
+            print('acc must be positive!')
+            return 0
+        
+        for i in range(max_retry):
+            hex = struct.pack("<f", acc)
+            feedback_frame = self.send_frame(0x7FF, [id, 0x00, 0x55, 0x04] + list(hex))
+            if feedback_frame[0] == id:  # match
+                byte_data = bytes(feedback_frame[4:8])
+                data = struct.unpack("<f", byte_data)[0]
+                break
+            time.sleep(0.1)
+        return data
+    
+    
+    def read_dec(self, id, max_retry=20):
+        data = 0
+        for i in range(max_retry):
+            feedback_frame = self.send_frame(0x7FF, [id, 0x00, 0x33, 0x05] + [0x00] * 4)
+            if feedback_frame[0] == id:  # match
+                byte_data = bytes(feedback_frame[4:8])
+                data = struct.unpack("<f", byte_data)[0]
+                break
+            time.sleep(0.1)
+        return data
 
+    def write_dec(self, id, dec, max_retry=20):
+        data = 0
+        if dec > 0:
+            print('dec must be negative!')
+            return 0
+        
+        for i in range(max_retry):
+            hex = struct.pack("<f", dec)
+            feedback_frame = self.send_frame(0x7FF, [id, 0x00, 0x55, 0x05] + list(hex))
+            if feedback_frame[0] == id:  # match
+                byte_data = bytes(feedback_frame[4:8])
+                data = struct.unpack("<f", byte_data)[0]
+                break
+            time.sleep(0.1)
+        return data
 
 
 if __name__ == "__main__":

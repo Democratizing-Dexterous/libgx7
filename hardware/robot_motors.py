@@ -118,3 +118,5 @@ class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVd
         for i in range(self.num_motors):
             self.can.write_control_mode(i + 1, mode)
             print(f'Joint {i+1} writing mode done...')
+            
+    

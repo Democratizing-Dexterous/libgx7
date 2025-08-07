@@ -19,7 +19,7 @@ robot_config:
     - type: dmj4340
       limits:
         position:
-          lower: -10   # custom limit for this specific motor
+          lower: -20   # custom limit for this specific motor
           upper: 210
     - type: dmj4340
       limits:
