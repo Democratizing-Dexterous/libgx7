@@ -9,7 +9,7 @@ import threading
 
 from hardware import VCICAN, RobotMotors
 from utils.utils import precise_sleep
-from utils.utils import MotorMITCmd, MotorPVTCmd, MotorPVCmd, MotorStatus
+from utils.utils import MotorStatus
 
 from .kinematics import Kinematics
 
@@ -31,18 +31,33 @@ class Robot:
         self.robot_motors = RobotMotors(can)
         self.num_dof = self.robot_motors.num_motors
         self.motor_limits = self.robot_motors.motor_limits
-
-        init_mit_cmd_params = [[0] * self.num_dof]*5
-        self.motors_mit_cmd = MotorMITCmd(*init_mit_cmd_params)
-
-        init_pvt_cmd_params = [[0] * self.num_dof]*3
-        self.motors_pvt_cmd = MotorPVTCmd(*init_pvt_cmd_params)
-
-        init_pv_cmd_params = [[0] * self.num_dof]*2
-        self.motors_pv_cmd = MotorPVCmd(*init_pv_cmd_params)
         
         self.init_motors_status_params = [[0] * self.num_dof] * 8
         self.global_motors_status = MotorStatus(*self.init_motors_status_params)
+      
+        ##############
+        # PVT control
+        ##############
+        self.pvt_control_positions = [0] * self.num_dof
+        self.pvt_control_velocities = [0] * self.num_dof
+        self.pvt_control_torques = [0] * self.num_dof
+        
+        ##############
+        # PV control
+        ##############
+        self.pv_control_positions = [0] * self.num_dof
+        self.pv_control_velocities = [0] * self.num_dof
+        
+        
+        ##############
+        # MIT control
+        ##############
+        self.mit_control_positions = [0] * self.num_dof
+        self.mit_control_velocities = [0] * self.num_dof
+        self.mit_control_torques = [0] * self.num_dof
+        self.mit_control_kps = [0] * self.num_dof
+        self.mit_control_kds = [0] * self.num_dof
+        
         
         # Flag to control the thread loop
         self.running = False
@@ -113,28 +128,28 @@ class Robot:
         else:
             # 从mit切换到pvt，先获取切换前位置，然后设置PVT控制位保持当前位置
             positions = self.getJP()
-            self.setJPVT(positions, [0] * len(positions), [0.6] * len(positions))
+            self.setJPVTs(positions, [0] * len(positions), [0.6] * len(positions))
 
             # 先复制prev control state
             self.control_state.prev_control_state = (
                 self.control_state.current_control_state
             )
-            # 然后设置current为MIT
+            # 然后设置current为PVT
             self.control_state.current_control_state = MODE_PVT
 
     def switch_pv(self):
         if self.control_state.current_control_state == MODE_PV:
             return
         else:
-            # 从mit切换到pvt，先获取切换前位置，然后设置PVT控制位保持当前位置
+            # 从mit切换到pv，先获取切换前位置，然后设置PV控制位保持当前位置
             positions = self.getJP()
-            self.setJPV(positions, [0.5] * len(positions))
+            self.setJPVs(positions, [0.5] * len(positions))
 
             # 先复制prev control state
             self.control_state.prev_control_state = (
                 self.control_state.current_control_state
             )
-            # 然后设置current为MIT
+            # 然后设置current为PV
             self.control_state.current_control_state = MODE_PV
         
     def get_status(self):
@@ -255,26 +270,38 @@ class Robot:
     ### MIT Mode ##################
     ###############################
 
-    def setJP(self, positions):
-        self.motors_mit_cmd.positions = positions
-        self.motors_mit_cmd.velocities = [0] * len(positions)
-        self.motors_mit_cmd.torques = [0] * len(positions)
-        self.motors_mit_cmd.kps = [10] * len(positions)
-        self.motors_mit_cmd.kds = [2] * len(positions)
+    def setJP(self, id, position):
+        self.mit_control_positions[id-1] = position
+        self.mit_control_velocities[id-1] = 0
+        self.mit_control_kps[id-1] = 10
+        self.mit_control_kds[id-1] = 2
 
-    def setJT(self, torques):
-        self.motors_mit_cmd.torques = torques
-        self.motors_mit_cmd.velocities = [0] * len(torques)
-        self.motors_mit_cmd.kps = [0] * len(torques)
-        self.motors_mit_cmd.kds = [0] * len(torques)
+    def setJPs(self, positions):
+        """
+        Set position for all motors in MIT mode
+        """
+        self.mit_control_positions = positions
+        self.mit_control_velocities = [0] * len(positions)
+        self.mit_control_torques = [0] * len(positions)
+        self.mit_control_kps = [10] * len(positions)
+        self.mit_control_kds = [2] * len(positions)
+
+    def setJTs(self, torques):
+        """
+        Set torque for all motors in MIT mode
+        """
+        self.mit_control_torques = torques
+        self.mit_control_velocities = [0] * len(torques)
+        self.mit_control_kps = [0] * len(torques)
+        self.mit_control_kds = [0] * len(torques)
 
     def mit_cmd(self):
         ids = list(np.arange(1, self.num_dof + 1))
-        poss = self.motors_mit_cmd.positions
-        vels = self.motors_mit_cmd.velocities
-        torques = self.motors_mit_cmd.torques
-        kps = self.motors_mit_cmd.kps
-        kds = self.motors_mit_cmd.kds
+        poss = self.mit_control_positions
+        vels = self.mit_control_velocities
+        torques = self.mit_control_torques
+        kps = self.mit_control_kps
+        kds = self.mit_control_kds
 
         return self.robot_motors.set_motor_mit_all(ids, poss, vels, kps, kds, torques)
 
@@ -282,19 +309,24 @@ class Robot:
     ### PVT Mode ##################
     ###############################
 
-    def setJPVT(self, positions, velocities, torques):
+    def setJPVTs(self, positions, velocities, torques):
         """
         set position (control goal), velocity (limit), torque (%, percentage, limit) for all motors
         """
-        self.motors_pvt_cmd.positions = positions
-        self.motors_pvt_cmd.velocities = velocities
-        self.motors_pvt_cmd.torques = torques
+        self.pvt_control_positions = positions
+        self.pvt_control_velocities = velocities
+        self.pvt_control_torques = torques
+        
+    def setJPVT(self, id, position, velocity, torque):
+        self.pvt_control_positions[id-1] = position
+        self.pvt_control_velocities[id-1] = velocity
+        self.pvt_control_torques[id-1] = torque
 
     def pvt_cmd(self):
         ids = list(np.arange(1, self.num_dof + 1))
-        poss = self.motors_pvt_cmd.positions
-        vels = self.motors_pvt_cmd.velocities
-        torques = self.motors_pvt_cmd.torques
+        poss = self.pvt_control_positions
+        vels = self.pvt_control_velocities
+        torques = self.pvt_control_torques
 
         return self.robot_motors.set_motor_pvt_all(ids, poss, vels, torques)
 
@@ -302,18 +334,24 @@ class Robot:
     ### PV Mode ###################
     ###############################
     
-    def setJPV(self, positions, velocities):
+    def setJPVs(self, positions, velocities):
         """
         set position (control goal), velocity (limit) for all motors
         """
-
-        self.motors_pv_cmd.positions = positions
-        self.motors_pv_cmd.velocities = velocities
+        self.pv_control_positions = positions
+        self.pv_control_velocities = velocities
+        
+    def setJPV(self, id, position, velocity):
+        """
+        set position (control goal), velocity (limit) for all motors
+        """
+        self.pv_control_positions[id-1] = position
+        self.pv_control_velocities[id-1] = velocity
         
     def pv_cmd(self):
         ids = list(np.arange(1, self.num_dof + 1))
-        poss = self.motors_pv_cmd.positions
-        vels = self.motors_pv_cmd.velocities
+        poss = self.pv_control_positions
+        vels = self.pv_control_velocities
 
         return self.robot_motors.set_motor_pv_all(ids, poss, vels)
     

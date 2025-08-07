@@ -16,7 +16,6 @@ def precise_sleep(duration):
 @dataclass
 class MotorStatus:
     """电机状态数据类"""
-
     ids: list
     states: list
     positions: list
@@ -27,35 +26,3 @@ class MotorStatus:
     # double
     timestamps: list
 
-
-@dataclass
-class MotorMITCmd:
-    """
-    MIT模式下的电机指令数据类
-    """
-
-    positions: list
-    velocities: list
-    torques: list
-    kps: list
-    kds: list
-
-
-@dataclass
-class MotorPVTCmd:
-    """
-    PVT模式下的电机指令数据类
-    """
-
-    positions: list
-    velocities: list
-    torques: list
-
-@dataclass
-class MotorPVCmd:
-    """
-    PV模式下的电机指令数据类
-    """
-
-    positions: list
-    velocities: list
