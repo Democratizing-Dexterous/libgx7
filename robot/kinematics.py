@@ -3,7 +3,7 @@ import pinocchio as pin
 
 
 class Kinematics:
-    def __init__(self, urdf=None) -> None:
+    def __init__(self, urdf="../descriptions/urdf/gx7.urdf") -> None:
         self.urdf = urdf
         self.model = pin.buildModelFromUrdf(urdf)
         self.data = self.model.createData()
