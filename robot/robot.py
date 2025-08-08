@@ -62,6 +62,8 @@ class Robot:
         # Flag to control the thread loop
         self.running = False
         self.threading_robot_run = None
+        
+        self.setup_done = False
 
         mode = 0
         if control_mode == 'pvt':
@@ -192,6 +194,7 @@ class Robot:
         for i, jp in enumerate(jps):
             if jp < self.motor_limits[i][0]*np.pi/180 or jp > self.motor_limits[i][1]*np.pi/180:
                 info = f'第{i+1}关节超出位置限制！请拖动到合理范围然后重新启动程序'
+                print(i+1, jp, self.motor_limits[i][0]*np.pi/180, self.motor_limits[i][1]*np.pi/180)
                 return False, info
         return True, ''
 
@@ -367,6 +370,21 @@ class Robot:
     
     def disable(self):
         return self.robot_motors.disable_all()
+    
+    def setup(self):
+        if not self.setup_done:
+            robot_motors = self.robot_motors
+            # 失能所有电机
+            feedbacks_all = robot_motors.disable_all()
+            self.update_status(feedbacks_all)
+            # 清除错误
+            robot_motors.clear_error_all()
+            time.sleep(1)
+
+            # 使能所有电机
+            feedbacks_all = robot_motors.enable_all()
+            self.update_status(feedbacks_all)
+            self.setup_done = True
 
 
     def loop(self):
@@ -382,22 +400,16 @@ class Robot:
         iterations = 0
 
         print('Starting robot thread...')
+        
+        if not self.setup_done:
+            print('Please setup first!')
+            return 
         try:
-            # 失能所有电机
-            feedbacks_all = robot_motors.disable_all()
-            self.update_status(feedbacks_all)
-            # 清除错误
-            robot_motors.clear_error_all()
-            time.sleep(1)
-
-            # 使能所有电机
-            feedbacks_all = robot_motors.enable_all()
-            self.update_status(feedbacks_all)
-
             # Main control loop
             while self.running:  # Use flag to control the loop
                 # 记录循环开始时间
                 loop_start = time.perf_counter()
+                # print(loop_start)
 
                 if self.soft_limit:
                     # 判断关节限位

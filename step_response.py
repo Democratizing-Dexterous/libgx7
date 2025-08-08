@@ -15,6 +15,7 @@ parser.add_argument('--speed_limit', type=float, default=2.0, help='速度限制
 parser.add_argument('--duration', type=int, default=300, help='测试持续时间 (帧数)')
 parser.add_argument('--mode', type=str, default='pv', choices=['pv', 'pvt', 'mit'], help='控制模式')
 parser.add_argument('--pk', type=float, default=56, help='位置环P')
+parser.add_argument('--vk', type=float, default=3.8, help='速度环P')
 parser.add_argument('--acc', type=float, default=5, help='加速度')
 args = parser.parse_args()
 
@@ -24,6 +25,7 @@ target = args.target
 speed_limit = args.speed_limit
 acc = args.acc
 pk = args.pk
+vk = args.vk
 N = args.duration
 mode = args.mode
 
@@ -33,6 +35,7 @@ robot = GX7(FREQ, 'win', mode)
 robot.can.write_acc(axis, args.acc)
 robot.can.write_dec(axis, -args.acc)
 robot.can.write_pos_kp(axis, pk)
+robot.can.write_vel_kp(axis, vk/1000)
 
 # 读取电机控制参数
 pos_kp = robot.can.read_pos_kp(axis)
