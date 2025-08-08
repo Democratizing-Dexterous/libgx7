@@ -86,14 +86,16 @@ class Dynamics:
     def __init__(self):
         abs_path = os.path.abspath(__file__)
         lib_path = os.path.join(
-                    os.path.dirname(abs_path), f"libdynamics.so"
+                    os.path.dirname(abs_path), "libs/libdynamics.so"
                 )
         
         lib = ctypes.CDLL(lib_path)
         
+        self.urdf_sign = np.array([-1, 1, 1, 1, -1, -1])
+
         self.h_func = setup_dynamics_function(lib)
         
-        self.beta = np.load(os.path.join(os.path.dirname(abs_path), 'beta_ols.npy'))
+        self.beta = np.load(os.path.join(os.path.dirname(abs_path), 'libs/beta_ols.npy'))
         
         self.base_idxs = np.array([5, 11, 12, 13, 14, 15, 16, 18, 19, 20, 
         21, 25, 26, 27, 28, 29, 30, 32, 33, 34, 
@@ -104,65 +106,7 @@ class Dynamics:
         
     def calc(self, q, dq, ddq):
         regressor =  self.h_func(q, dq, ddq)
-        
         regressor = regressor.reshape(6, -1)[:, self.base_idxs]
-        
-        tau = regressor @ self.beta
-        
+        tau = regressor @ self.beta * self.urdf_sign[:, None] # 乘以urdf_sign是因为urdf文件中定义的关节方向和实际机器人的关节方向相反
         return tau
         
-
-
-# Example usage
-if __name__ == "__main__":
-    import ctypes
-    # Path to your C source file
-    c_source_file = "gx7_dyna_regreessor.c"
-    
-    # 1. Compile the library
-    lib_path = compile_dynamics_library(c_source_file)
-    if lib_path is None:
-        exit(1)
-    
-    # 2. Load the compiled library
-    abs_path = os.path.abspath(__file__)
-    lib_path = os.path.join(
-                os.path.dirname(abs_path), f"libdynamics.so"
-            )
-    
-    # 3. Set up the Python-callable function
-    try:
-        if not os.path.exists(lib_path):
-            raise FileNotFoundError(f"Library file {lib_path} not found")
-        lib = ctypes.CDLL(lib_path)
-        print(f"Successfully loaded {lib_path}")
-    
-        # Get the Python wrapper function
-        h_func = setup_dynamics_function(lib)
-    
-        # 4. Test the function with some example data
-        n = 6  # GX7 has 6 axes
-        q = np.random.rand(n)
-        dq = np.random.rand(n)
-        ddq = np.random.rand(n)
-    
-        print("Input q:", q)
-        print("Input dq:", dq)
-        print("Input ddq:", ddq)
-    
-        # Call the Python wrapper function
-        regressor = h_func(q, dq, ddq)
-    
-        print("Output regressor shape:", regressor.shape)
-        print("Output regressor sample:", regressor)
-    except FileNotFoundError as e:
-        print(f"File error: {e}")
-        exit(1)
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        exit(1)
-        
-        print("Output regressor:", regressor)
-        
-    except Exception as e:
-        print(f"Error: {e}")
