@@ -47,24 +47,13 @@ class VCI_CAN_OBJ_ARRAY(Structure):
 
 
 class VCICAN:
-    def __init__(self, platform='win'):
+    def __init__(self):
+        # linux so
+        self.lib_can_path = os.path.join(
+            os.path.dirname(abs_path), "libs/libcontrolcan.so"
+        )
+        self.usbcan = cdll.LoadLibrary(self.lib_can_path)
          
-        if platform == 'win':
-            # win x64 dll
-            self.lib_can_path = os.path.join(
-                os.path.dirname(abs_path), "libs/ControlCAN.dll"
-            )
-            self.usbcan = windll.LoadLibrary(self.lib_can_path)
-        elif platform == 'linux':
-            # linux so
-            self.lib_can_path = os.path.join(
-                os.path.dirname(abs_path), "libs/libcontrolcan.so"
-            )
-            self.usbcan = cdll.LoadLibrary(self.lib_can_path)
-         
-        else:
-            print('Not supported OS!!!')
-            os._exit(0)
 
     def init_can(self):
         vci_initconfig = VCI_INIT_CONFIG(

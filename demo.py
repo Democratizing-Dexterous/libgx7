@@ -3,7 +3,7 @@ from robot import GX7
 import time
 
 FREQ = 100  # Hz
-robot = GX7(FREQ, 'win', 'pv')
+robot = GX7(FREQ, 'pv')
 robot.setup()
 
 

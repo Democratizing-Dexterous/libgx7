@@ -23,10 +23,10 @@ class ControlState:
     prev_control_state: int
 
 class Robot:
-    def __init__(self, freq=100, platform='win', control_mode='pvt', soft_limit=True):
+    def __init__(self, freq=100, control_mode='pvt', soft_limit=True):
         self.kin = Kinematics()
         
-        self.can = VCICAN(platform)
+        self.can = VCICAN()
         self.freq = freq
         self.robot_motors = RobotMotors(self.can)
         self.num_dof = self.robot_motors.num_motors
@@ -115,7 +115,7 @@ class Robot:
         else:
             # 从pvt切换到mit，先获取切换前位置，然后设置MIT控制位保持当前位置
             positions = self.getJP()
-            self.setJP(positions)
+            self.setJPs(positions)
 
             # 先复制prev control state
             self.control_state.prev_control_state = (

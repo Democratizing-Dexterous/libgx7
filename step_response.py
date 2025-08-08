@@ -30,7 +30,7 @@ N = args.duration
 mode = args.mode
 
 FREQ = 100  # Hz
-robot = GX7(FREQ, 'win', mode)
+robot = GX7(FREQ, mode)
 
 robot.can.write_acc(axis, args.acc)
 robot.can.write_dec(axis, -args.acc)
