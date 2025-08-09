@@ -219,11 +219,11 @@
     </inertial>
 
   </link>
-  <joint name="joint7" type="revolute">
+  <joint name="joint7" type="fixed">
     <origin xyz="0 0.099 0.013" rpy="1.5707963 0 -3.141592616" />
     <parent link="Link6" />
     <child link="Link7" />
     <axis xyz="0 0 -1" />
-    <limit lower="-3.141592615" upper="3.141592615" effort="5" velocity="3.2" />
+    <!-- <limit lower="-3.141592615" upper="3.141592615" effort="5" velocity="3.2" /> -->
   </joint>
 </robot>

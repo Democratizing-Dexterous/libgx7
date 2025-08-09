@@ -24,7 +24,7 @@ class ControlState:
 
 class Robot:
     def __init__(self, freq=100, control_mode='pvt', soft_limit=True):
-        # self.kin = Kinematics()
+        self.kin = Kinematics()
         
         self.can = VCICAN()
         self.freq = freq
@@ -94,6 +94,7 @@ class Robot:
         self.threading_robot_run.daemon = True
         self.threading_robot_run.start()
         print("Robot thread started.")
+        time.sleep(1)
         
     def stop(self):
         """
@@ -179,8 +180,8 @@ class Robot:
     def fk(self, joint_positions):
         return self.kin.fk(joint_positions)
     
-    def ik(self, position, orientation, num_iters=100, threshold=1e-3):
-        return self.kin.ik(position, orientation, num_iters=100, threshold=1e-3)
+    def ik(self, position, orientation=[0, 0, 0], num_iters=200, threshold=1e-6):
+        return self.kin.ik(position, orientation, num_iters=num_iters, threshold=threshold)
 
     def jac(self, joint_positions):
         return self.kin.jac(joint_positions)
@@ -292,7 +293,7 @@ class Robot:
         self.mit_control_positions = positions
         self.mit_control_velocities = [0] * len(positions)
         self.mit_control_torques = [0] * len(positions)
-        self.mit_control_kps = [10] * len(positions)
+        self.mit_control_kps = [30] * len(positions)
         self.mit_control_kds = [2] * len(positions)
 
     def setJTs(self, torques):
