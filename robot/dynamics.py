@@ -91,7 +91,7 @@ class Dynamics:
         
         lib = ctypes.CDLL(lib_path)
         
-        self.urdf_sign = np.array([-1, 1, 1, 1, -1, -1])
+        self.urdf_sign = np.array([-1, 1, 1, 1, 1, 1])
 
         self.h_func = setup_dynamics_function(lib)
         
