@@ -24,7 +24,7 @@ class ControlState:
 
 class Robot:
     def __init__(self, freq=100, control_mode='pvt', soft_limit=True):
-        self.kin = Kinematics()
+        # self.kin = Kinematics()
         
         self.can = VCICAN()
         self.freq = freq

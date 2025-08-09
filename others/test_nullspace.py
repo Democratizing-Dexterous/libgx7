@@ -4,7 +4,6 @@ import numpy as np
 import time
 import math
 
-from robot import GX7
 
 directions_urdf = [-1, 1, 1, 1, -1, -1]
 
@@ -56,18 +55,14 @@ p.connect(p.GUI)
 
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
-time_step = 0.001
 gravity_constant = -9.81
-p.resetSimulation()
-p.setTimeStep(time_step)
+
 p.setGravity(0.0, 0.0, gravity_constant)
 
-p.loadURDF("plane.urdf", [0, 0, -0.3])
+p.loadURDF("plane.urdf", [0, 0, 0])
 
-kukaId = p.loadURDF("./urdf/GX7_250721.urdf", useFixedBase=True)
+kukaId = p.loadURDF("../descriptions/urdf/gx7.urdf", useFixedBase=True)
 
-FREQ = 100  # Hz
-robot = GX7(FREQ, 'pv')
 
 valid_joints = []
 for i in range(p.getNumJoints(kukaId)):
@@ -84,89 +79,86 @@ for i in range(p.getNumJoints(kukaId)):
 numJoints = p.getNumJoints(kukaId)
 kukaEndEffectorIndex = numJoints - 1
 
-xyz = [0, 0, 0.6]
+xyz = [0, 0, 0.4]
 # Set a joint target for the position control and step the sim.
-joint_positions = p.calculateInverseKinematics(kukaId, 6, xyz, maxNumIterations=300, residualThreshold=1e-4)
+
+ori_q = p.getQuaternionFromEuler([-math.pi/2, 0, 0])
+joint_positions = p.calculateInverseKinematics(kukaId, 7, xyz, ori_q, maxNumIterations=200, residualThreshold=1e-6)
 
 
-robot.setup()
-robot.run()
-
-for j in range(10):
+for j in range(200):
     # 只控制有效的关节
-    idx = 0
     for i, joint_position in zip(valid_joints, joint_positions):
         p.setJointMotorControl2(kukaId, i, p.POSITION_CONTROL, joint_position)
-        idx += 1
         
-        if idx <=6:
-            robot.setJPV(idx, joint_position*directions_urdf[idx-1], 1)
-        
-    
+      
     p.stepSimulation()
+    
+link_state = p.getLinkState(kukaId, 7)
+position = link_state[4]  # Position of the link
+orientation = link_state[5]  # Orientation of the link (quaternion)
+              
+print(position, p.getEulerFromQuaternion(orientation))
     
 direction = 1
 j = 0
-duration = 1200
-step_size = 0.03
+duration = 12000
+step_size = 0.002
 
-while True:
-    # Get the joint and link state directly from Bullet.
-    pos, vel, torq = getJointStates(kukaId)
-    mpos, mvel, mtorq = getMotorJointStates(kukaId)
+# while True:
+#     # Get the joint and link state directly from Bullet.
+#     pos, vel, torq = getJointStates(kukaId)
+#     mpos, mvel, mtorq = getMotorJointStates(kukaId)
 
-    result = p.getLinkState(kukaId,
-                            kukaEndEffectorIndex,
-                            computeLinkVelocity=1,
-                            computeForwardKinematics=1)
-    link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
-    # Get the Jacobians for the CoM of the end-effector link.
-    # Note that in this example com_rot = identity, and we would need to use com_rot.T * com_trn.
-    # The localPosition is always defined in terms of the link frame coordinates.
+#     result = p.getLinkState(kukaId,
+#                             kukaEndEffectorIndex,
+#                             computeLinkVelocity=1,
+#                             computeForwardKinematics=1)
+#     link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
+#     # Get the Jacobians for the CoM of the end-effector link.
+#     # Note that in this example com_rot = identity, and we would need to use com_rot.T * com_trn.
+#     # The localPosition is always defined in terms of the link frame coordinates.
 
-    zero_vec = [0.0] * len(mpos)
-    jac_t, jac_r = p.calculateJacobian(kukaId, kukaEndEffectorIndex, com_trn, mpos, zero_vec, zero_vec)
+#     print(frame_pos, frame_rot)
+#     zero_vec = [0.0] * len(mpos)
+#     jac_t, jac_r = p.calculateJacobian(kukaId, kukaEndEffectorIndex, com_trn, mpos, zero_vec, zero_vec)
 
-    jac = np.concatenate([np.array(jac_t), np.array(jac_r)], axis=0)
+#     jac = np.concatenate([np.array(jac_t), np.array(jac_r)], axis=0)
 
-    # 获取雅可比矩阵的实际维度
-    jac_rows, jac_cols = jac.shape
+#     # 获取雅可比矩阵的实际维度
+#     jac_rows, jac_cols = jac.shape
 
-    # 使用SVD分解
-    u, s, vh = np.linalg.svd(jac, full_matrices=True)
+#     # 使用SVD分解
+#     u, s, vh = np.linalg.svd(jac, full_matrices=True)
 
     
-    null_space = vh[-1].T  # 取V^H矩阵的最后一行的转置
+#     null_space = vh[-1].T  # 取V^H矩阵的最后一行的转置
     
-    # if np.linalg.norm(null_space) < 1e-5:
-    #     direction *= -1
+#     # if np.linalg.norm(null_space) < 1e-5:
+#     #     direction *= -1
     
     
-    error = np.linalg.norm(jac@null_space)
+#     error = np.linalg.norm(jac@null_space)
+#     print(error)
     
    
     
-    # 设置步长，控制移动速度
+#     # 设置步长，控制移动速度
     
-    m_pos_new = np.array(mpos) + null_space * step_size * direction
+#     m_pos_new = np.array(mpos) + null_space * step_size * direction
     
-    j += 1    
+#     j += 1    
     
-    if j % duration == 0:
-        j = 0
-        direction *= -1
+#     if j % duration == 0:
+#         j = 0
+#         direction *= -1
         
-    idx = 0
-    # 只控制有效的关节
-    for i, joint_position in zip(valid_joints, m_pos_new):
-        p.setJointMotorControl2(kukaId, i, p.POSITION_CONTROL, joint_position)
+#     # 只控制有效的关节
+#     for i, joint_position in zip(valid_joints, m_pos_new):
+#         p.setJointMotorControl2(kukaId, i, p.POSITION_CONTROL, joint_position)
         
-        idx += 1
-        
-        if idx <=6:
-            robot.setJPV(idx, joint_position*directions_urdf[idx-1], 1)
     
-    # print(m_pos_new)
+#     # print(m_pos_new)
     
-    p.stepSimulation()
-    time.sleep(1/240.)
+#     p.stepSimulation()
+

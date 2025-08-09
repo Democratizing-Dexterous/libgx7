@@ -75,7 +75,7 @@ def main():
     
     try:
         while True:
-            i = 1
+
             # Update joint positions based on sliders
             for joint_idx, slider_id in joint_sliders:
                 target_position = p.readUserDebugParameter(slider_id)
@@ -85,12 +85,8 @@ def main():
                     p.POSITION_CONTROL, 
                     targetPosition=target_position
                 )
+
                 
-                
-                i += 1
-                
-                if i > 6:
-                    break
             
             # Get and print current joint positions
             joint_states = []
@@ -114,19 +110,22 @@ def main():
                     break
             
             if link_index != -1:
+                
                 # Get the position and orientation of the last link
                 link_state = p.getLinkState(robotId, link_index)
                 position = link_state[4]  # Position of the link
                 orientation = link_state[5]  # Orientation of the link (quaternion)
                 
+                print(position, p.getEulerFromQuaternion(orientation))
+                
                 # Convert quaternion to rotation matrix
                 rot_matrix = p.getMatrixFromQuaternion(orientation)
-                rot_matrix = np.array(rot_matrix).reshape(3, 3)
+                rot_matrix = np.array(rot_matrix).reshape(3, 3).T
                 
                 # Define the length of the coordinate axes
                 axis_length = 0.05
                 
-                # Calculate the endpoints for the three axes
+                # Calculate the endpoints for the three axes using rot_matrix
                 x_end = [position[0] + axis_length * rot_matrix[0][0],
                          position[1] + axis_length * rot_matrix[0][1],
                          position[2] + axis_length * rot_matrix[0][2]]
