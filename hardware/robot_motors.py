@@ -21,14 +21,14 @@ MOTOR_NAMES = [c['type'] for c in MOTOR_CONFIGS]
 MOTOR_LIMITS = [[c['limits']['position']['lower'], c['limits']['position']['upper']] for c in MOTOR_CONFIGS]
 
 class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVdnzb
-    def __init__(self, can):
+    def __init__(self, can, can_channel):
         self.can = can
-        self.can.init_can()
+        self.can_channel = can_channel
         self.num_motors = NUM_MOTORS
         self.motor_limits = MOTOR_LIMITS
 
     def set_zero(self, id):
-        feedback_frame = self.can.send_frame(id, [0xFF] * 7 + [0xFE])  # zero frame
+        feedback_frame = self.can.send_frame(self.can_channel, id, [0xFF] * 7 + [0xFE])  # zero frame
         return extract_feedback_frame(
             MOTOR_TYPES, MOTOR_NAMES[id - 1], feedback_frame
         )  # id start from 1
@@ -38,19 +38,19 @@ class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVd
             self.set_zero(id)
 
     def disable_motor(self, id):
-        feedback_frame = self.can.send_frame(id, [0xFF] * 7 + [0xFD])  # disable frame
+        feedback_frame = self.can.send_frame(self.can_channel, id, [0xFF] * 7 + [0xFD])  # disable frame
         return extract_feedback_frame(
             MOTOR_TYPES, MOTOR_NAMES[id - 1], feedback_frame
         )  # id start from 1
 
     def enable_motor(self, id):
-        feedback_frame = self.can.send_frame(id, [0xFF] * 7 + [0xFC])  # enable frame
+        feedback_frame = self.can.send_frame(self.can_channel, id, [0xFF] * 7 + [0xFC])  # enable frame
         return extract_feedback_frame(
             MOTOR_TYPES, MOTOR_NAMES[id - 1], feedback_frame
         )
         
     def clear_error(self, id):
-        self.can.send_frame(id, [0xFF] * 7 + [0xFB])
+        self.can.send_frame(self.can_channel, id, [0xFF] * 7 + [0xFB])
         
     def clear_error_all(self):
         for id in range(1, self.num_motors + 1):
@@ -74,7 +74,7 @@ class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVd
         torq_control_frame = make_mit_frame(
             MOTOR_TYPES, MOTOR_NAMES[id - 1], pos, vel, kp, kd, torque
         )
-        feedback_frame = self.can.send_frame(id, torq_control_frame)
+        feedback_frame = self.can.send_frame(self.can_channel, id, torq_control_frame)
         return extract_feedback_frame(
             MOTOR_TYPES, MOTOR_NAMES[id - 1], feedback_frame
         )
@@ -88,7 +88,7 @@ class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVd
 
     def set_motor_pvt(self, id, pos, vel, torque):
         pvt_control_frame = make_pvt_frame(pos, vel, torque)
-        feedback_frame = self.can.send_frame(id + 0x300, pvt_control_frame)
+        feedback_frame = self.can.send_frame(self.can_channel, id + 0x300, pvt_control_frame)
         return extract_feedback_frame(
             MOTOR_TYPES, MOTOR_NAMES[id - 1], feedback_frame
         )
@@ -102,7 +102,7 @@ class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVd
 
     def set_motor_pv(self, id, pos, vel):
         pv_control_frame = make_pv_frame(pos, vel)
-        feedback_frame = self.can.send_frame(id + 0x100, pv_control_frame)
+        feedback_frame = self.can.send_frame(self.can_channel, id + 0x100, pv_control_frame)
         return extract_feedback_frame(
             MOTOR_TYPES, MOTOR_NAMES[id - 1], feedback_frame
         )
@@ -116,7 +116,7 @@ class RobotMotors:  # https://gl1po2nscb.feishu.cn/wiki/VYrlwHI7liHzXIkx0s0cUOVd
 
     def write_control_mode_all(self, mode):
         for i in range(self.num_motors):
-            self.can.write_control_mode(i + 1, mode)
+            self.can.write_control_mode(self.can_channel, i + 1, mode)
             print(f'Joint {i+1} writing mode done...')
             
     

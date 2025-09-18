@@ -23,12 +23,14 @@ class ControlState:
     prev_control_state: int
 
 class Robot:
-    def __init__(self, freq=100, control_mode='pvt', soft_limit=True):
+    def __init__(self, can: VCICAN, can_channel=0, freq=100, control_mode='pvt', soft_limit=True):
         self.kin = Kinematics()
-        
-        self.can = VCICAN()
         self.freq = freq
-        self.robot_motors = RobotMotors(self.can)
+        
+        self.can = can
+        self.can_channel = can_channel
+        
+        self.robot_motors = RobotMotors(self.can, self.can_channel)
         self.num_dof = self.robot_motors.num_motors
         self.motor_limits = self.robot_motors.motor_limits
         
@@ -412,14 +414,14 @@ class Robot:
                 loop_start = time.perf_counter()
                 # print(loop_start)
 
-                if self.soft_limit:
-                    # 判断关节限位
-                    joints_valid, info = self.check_joint_limits()
-                    if not joints_valid:
-                        print(info)
-                        robot_motors.disable_all()
-                        self.running = False
-                        break
+                # if self.soft_limit:
+                #     # 判断关节限位
+                #     joints_valid, info = self.check_joint_limits()
+                #     if not joints_valid:
+                #         print(info)
+                #         robot_motors.disable_all()
+                #         self.running = False
+                #         break
 
                 # 检查错误
                 error_free, info = self.check_error()
