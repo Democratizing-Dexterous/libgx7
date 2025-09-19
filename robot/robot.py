@@ -13,44 +13,47 @@ from utils.utils import MotorStatus
 
 from .kinematics import Kinematics
 
-MODE_MIT = 1 # MIT模式
-MODE_PV = 2 # 位置限速模式
-MODE_PVT = 4 # 力位混合模式
+MODE_MIT = 1  # MIT模式
+MODE_PV = 2  # 位置限速模式
+MODE_PVT = 4  # 力位混合模式
+
 
 @dataclass
 class ControlState:
     current_control_state: int
     prev_control_state: int
 
+
 class Robot:
-    def __init__(self, can: VCICAN, can_channel=0, freq=100, control_mode='pvt', soft_limit=True):
+    def __init__(
+        self, can: VCICAN, can_channel=0, freq=100, control_mode="pvt", soft_limit=True
+    ):
         self.kin = Kinematics()
         self.freq = freq
-        
+
         self.can = can
         self.can_channel = can_channel
-        
+
         self.robot_motors = RobotMotors(self.can, self.can_channel)
         self.num_dof = self.robot_motors.num_motors
         self.motor_limits = self.robot_motors.motor_limits
-        
+
         self.init_motors_status_params = [[0] * self.num_dof] * 8
         self.global_motors_status = MotorStatus(*self.init_motors_status_params)
-      
+
         ##############
         # PVT control
         ##############
         self.pvt_control_positions = [0] * self.num_dof
         self.pvt_control_velocities = [0] * self.num_dof
         self.pvt_control_torques = [0] * self.num_dof
-        
+
         ##############
         # PV control
         ##############
         self.pv_control_positions = [0] * self.num_dof
         self.pv_control_velocities = [0] * self.num_dof
-        
-        
+
         ##############
         # MIT control
         ##############
@@ -59,29 +62,28 @@ class Robot:
         self.mit_control_torques = [0] * self.num_dof
         self.mit_control_kps = [0] * self.num_dof
         self.mit_control_kds = [0] * self.num_dof
-        
-        
+
         # Flag to control the thread loop
         self.running = False
         self.threading_robot_run = None
-        
+
         self.setup_done = False
 
         mode = 0
-        if control_mode == 'pvt':
+        if control_mode == "pvt":
             mode = MODE_PVT
-        if control_mode == 'pv':
+        if control_mode == "pv":
             mode = MODE_PV
-        if control_mode == 'mit':
+        if control_mode == "mit":
             mode = MODE_MIT
-        
+
         self.soft_limit = soft_limit
-        
+
         # 设置模式
         self.robot_motors.write_control_mode_all(mode)
         self.control_state = ControlState(mode, mode)
-        print(f'Init Mode: {control_mode}')
-        
+        print(f"Init Mode: {control_mode}")
+
     def run(self):
         """
         Start the robot control thread if not already running.
@@ -89,7 +91,7 @@ class Robot:
         if self.threading_robot_run is not None and self.threading_robot_run.is_alive():
             print("Robot thread is already running.")
             return
-            
+
         self.running = True
         self.threading_robot_run = threading.Thread(target=self.loop)
         # Make thread daemon so it doesn't block program exit
@@ -97,7 +99,7 @@ class Robot:
         self.threading_robot_run.start()
         print("Robot thread started.")
         time.sleep(1)
-        
+
     def stop(self):
         """
         Stop the robot control thread.
@@ -108,7 +110,7 @@ class Robot:
             # Wait for the thread to finish
             self.threading_robot_run.join(timeout=2.0)
             print("Robot thread stopped.")
-    
+
     def get_mode(self):
         return self.control_state.current_control_state
 
@@ -156,7 +158,7 @@ class Robot:
             )
             # 然后设置current为PV
             self.control_state.current_control_state = MODE_PV
-        
+
     def get_status(self):
         return self.global_motors_status
 
@@ -178,16 +180,14 @@ class Robot:
             for m in self.global_motors_status.timestamps
         ]
 
-
     def fk(self, joint_positions):
         return self.kin.fk(joint_positions)
-    
-    def ik(self, position, orientation=[0, 0, 0], num_iters=200, threshold=1e-6):
-        return self.kin.ik(position, orientation, num_iters=num_iters, threshold=threshold)
+
+    def ik(self, position, orientation=[0, 0, 0], psi=np.pi / 2):
+        return self.kin.ik(position, orientation, psi=psi)
 
     def jac(self, joint_positions):
         return self.kin.jac(joint_positions)
-
 
     def check_joint_limits(self):
         """
@@ -195,38 +195,46 @@ class Robot:
         """
         jps = self.global_motors_status.positions
         for i, jp in enumerate(jps):
-            if jp < self.motor_limits[i][0]*np.pi/180 or jp > self.motor_limits[i][1]*np.pi/180:
-                info = f'第{i+1}关节超出位置限制！请拖动到合理范围然后重新启动程序'
-                print(i+1, jp, self.motor_limits[i][0]*np.pi/180, self.motor_limits[i][1]*np.pi/180)
+            if (
+                jp < self.motor_limits[i][0] * np.pi / 180
+                or jp > self.motor_limits[i][1] * np.pi / 180
+            ):
+                info = f"第{i+1}关节超出位置限制！请拖动到合理范围然后重新启动程序"
+                print(
+                    i + 1,
+                    jp,
+                    self.motor_limits[i][0] * np.pi / 180,
+                    self.motor_limits[i][1] * np.pi / 180,
+                )
                 return False, info
-        return True, ''
+        return True, ""
 
     def check_error(self):
         # 8——超压； 9——欠压；A——过电流； B——MOS 过温；C——电机线圈过温； D——通讯丢失；E——过载；
         for i, jp in enumerate(self.global_motors_status.states):
             if jp == 0x8:
-                info = f'第{i+1}关节超压！'
+                info = f"第{i+1}关节超压！"
                 return False, info
             elif jp == 0x9:
-                info = f'第{i+1}关节欠压！'
+                info = f"第{i+1}关节欠压！"
                 return False, info
             elif jp == 0xA:
-                info = f'第{i+1}关节过电流！'
+                info = f"第{i+1}关节过电流！"
                 return False, info
             elif jp == 0xB:
-                info = f'第{i+1}关节MOS过温！'
+                info = f"第{i+1}关节MOS过温！"
                 return False, info
             elif jp == 0xC:
-                info = f'第{i+1}关节电机线圈过温！'
+                info = f"第{i+1}关节电机线圈过温！"
                 return False, info
             elif jp == 0xD:
-                info = f'第{i+1}关节通信丢失！'
+                info = f"第{i+1}关节通信丢失！"
                 return False, info
             elif jp == 0xE:
-                info = f'第{i+1}关节过载！'
+                info = f"第{i+1}关节过载！"
                 return False, info
 
-        return True, ''
+        return True, ""
 
     ###############################
     ### Joint Info ################
@@ -246,7 +254,7 @@ class Robot:
 
     def getMossTemp(self):
         return self.global_motors_status.temp_moss
-        
+
     def get_status_summary(self):
         """
         Returns a summary of the robot's current status in a readable format.
@@ -257,7 +265,7 @@ class Robot:
         torques = self.getJT()
         rotor_temps = self.getRotorTemp()
         moss_temps = self.getMossTemp()
-        
+
         summary = "Robot Status Summary:\n"
         summary += "--------------------\n"
         summary += f"Control Mode: {self.get_mode()}\n"
@@ -266,7 +274,7 @@ class Robot:
         summary += "Joint Torques (Nm): " + str(torques) + "\n"
         summary += "Rotor Temperatures: " + str(rotor_temps) + "\n"
         summary += "MOSFET Temperatures: " + str(moss_temps) + "\n"
-        
+
         # Add end effector position if joint positions are available
         if positions and len(positions) >= 6:
             try:
@@ -274,19 +282,18 @@ class Robot:
                 summary += "End Effector Position: " + str(ee_pos) + "\n"
             except:
                 pass
-                
-        return summary
 
+        return summary
 
     ###############################
     ### MIT Mode ##################
     ###############################
 
     def setJP(self, id, position):
-        self.mit_control_positions[id-1] = position
-        self.mit_control_velocities[id-1] = 0
-        self.mit_control_kps[id-1] = 10
-        self.mit_control_kds[id-1] = 2
+        self.mit_control_positions[id - 1] = position
+        self.mit_control_velocities[id - 1] = 0
+        self.mit_control_kps[id - 1] = 10
+        self.mit_control_kds[id - 1] = 2
 
     def setJPs(self, positions):
         """
@@ -328,11 +335,11 @@ class Robot:
         self.pvt_control_positions = positions
         self.pvt_control_velocities = velocities
         self.pvt_control_torques = torques
-        
+
     def setJPVT(self, id, position, velocity, torque):
-        self.pvt_control_positions[id-1] = position
-        self.pvt_control_velocities[id-1] = velocity
-        self.pvt_control_torques[id-1] = torque
+        self.pvt_control_positions[id - 1] = position
+        self.pvt_control_velocities[id - 1] = velocity
+        self.pvt_control_torques[id - 1] = torque
 
     def pvt_cmd(self):
         ids = list(np.arange(1, self.num_dof + 1))
@@ -345,35 +352,34 @@ class Robot:
     ###############################
     ### PV Mode ###################
     ###############################
-    
+
     def setJPVs(self, positions, velocities):
         """
         set position (control goal), velocity (limit) for all motors
         """
         self.pv_control_positions = positions
         self.pv_control_velocities = velocities
-        
+
     def setJPV(self, id, position, velocity):
         """
         set position (control goal), velocity (limit) for all motors
         """
-        self.pv_control_positions[id-1] = position
-        self.pv_control_velocities[id-1] = velocity
-        
+        self.pv_control_positions[id - 1] = position
+        self.pv_control_velocities[id - 1] = velocity
+
     def pv_cmd(self):
         ids = list(np.arange(1, self.num_dof + 1))
         poss = self.pv_control_positions
         vels = self.pv_control_velocities
 
         return self.robot_motors.set_motor_pv_all(ids, poss, vels)
-    
 
     def enable(self):
         return self.robot_motors.enable_all()
-    
+
     def disable(self):
         return self.robot_motors.disable_all()
-    
+
     def setup(self):
         if not self.setup_done:
             robot_motors = self.robot_motors
@@ -389,7 +395,6 @@ class Robot:
             self.update_status(feedbacks_all)
             self.setup_done = True
 
-
     def loop(self):
         """
         The main thread function that runs in the background.
@@ -402,11 +407,11 @@ class Robot:
         start_time = time.perf_counter()
         iterations = 0
 
-        print('Starting robot thread...')
-        
+        print("Starting robot thread...")
+
         if not self.setup_done:
-            print('Please setup first!')
-            return 
+            print("Please setup first!")
+            return
         try:
             # Main control loop
             while self.running:  # Use flag to control the loop
@@ -475,7 +480,7 @@ class Robot:
                     # print(f"实际频率: {actual_freq:.2f} Hz")
                     iterations = 0
                     start_time = time.perf_counter()
-        
+
         except Exception as e:
             print(f"Error in robot thread: {e}")
         finally:
@@ -485,6 +490,6 @@ class Robot:
                 print("Robot motors disabled.")
             except:
                 print("Failed to disable robot motors.")
-            
+
             self.running = False
             print("Robot thread stopped.")

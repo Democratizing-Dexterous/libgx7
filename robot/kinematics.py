@@ -1,70 +1,35 @@
 import numpy as np
-import os
-import pybullet as p
-import math
-import sys
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(abs_path)
+from ik_solve import gx7_ik_solve, gx7_fk
 
-os.chdir(abs_path)
 
 class Kinematics:
-    def __init__(self, urdf='../descriptions/urdf/gx7.urdf') -> None:
-        self.urdf = urdf
-        p.connect(p.DIRECT)
-        self.robotId = p.loadURDF(urdf, [0, 0, 0], useFixedBase=True)
-        
-        self.urdf_sign = np.array([-1, 1, 1, 1, 1, 1])
-        
-        num_joints = p.getNumJoints(self.robotId)
-        
-        self.valid_joints = [i for i in range(num_joints) if p.getJointInfo(self.robotId, i)[2] == p.JOINT_REVOLUTE]
-        
-        self.ee_link_index = 7
-        
-    def fk(self, qs):
-        qs = np.array(qs) * self.urdf_sign
-        for i, q in zip(self.valid_joints, qs):
-            p.setJointMotorControl2(
-                    self.robotId, 
-                    i, 
-                    p.POSITION_CONTROL, 
-                    targetPosition=q
-                )
-        for i in range(200):
-            p.stepSimulation()
-        
-        link_state = p.getLinkState(self.robotId, self.ee_link_index)
-        position = link_state[4]  # Position of the link
-        orientation = link_state[5]  # Orientation of the link (quaternion)
-        
-        rpy = p.getEulerFromQuaternion(orientation)
-        
-        return position, rpy
-        
-    def ik(self, xyz, rpy=[0, 0, 0], num_iters=300, threshold=1e-6):
-        ori_q = p.getQuaternionFromEuler(rpy)
-        qs = p.calculateInverseKinematics(self.robotId, self.ee_link_index, xyz, ori_q, maxNumIterations=num_iters, residualThreshold=threshold)        
-        return np.array(qs)*self.urdf_sign
-        
+    def __init__(self, limits):
+        self.limits = limits
 
-    def jac(self, qs):
-        qs = np.array(qs) * self.urdf_sign
-        result = p.getLinkState(self.robotId,
-                            self.ee_link_index,
-                            computeLinkVelocity=1,
-                            computeForwardKinematics=1)
-        link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
+    def ik(self, pos, ori, psi=np.pi / 6):
+        ik_output = gx7_ik_solve(pos, ori, psi=psi)
+        lower_limits = [limit[0] * np.pi / 180 for limit in self.limits]
+        upper_limits = [limit[1] * np.pi / 180 for limit in self.limits]
+        ik_output_limit = []
+        for i, qs in enumerate(ik_output):
 
-        zero_vec = [0.0] * len(qs)
-        jac_t, jac_r = p.calculateJacobian(self.robotId, self.ee_link_index, com_trn, qs.tolist(), zero_vec, zero_vec)
+            qs_normal = []
+            for q, l, u in zip(qs, lower_limits, upper_limits):
+                if q > np.pi:
+                    q = q - 2 * np.pi
+                elif q < -np.pi:
+                    q = q + 2 * np.pi
+                qs_normal.append(q)
 
-        jac = np.concatenate([np.array(jac_t), np.array(jac_r)], axis=0)
+                if q < l or q > u:
+                    break
+            if len(qs_normal) == len(lower_limits):
+                # If all joint angles are within limits, add to the output list
+                ik_output_limit.append(np.array(qs_normal).ravel())
 
-        return jac
+        return ik_output_limit
 
-if __name__ == "__main__":
-    kin = Kinematics()
-    
-    
+    def fk(self, joint_angles):
+        pos, ori = gx7_fk(joint_angles)
+        return pos, ori
