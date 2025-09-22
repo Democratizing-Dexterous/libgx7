@@ -6,10 +6,13 @@ import sys
 sys.path.append('../')
 from robot import GX7
 from robot.dynamics import Dynamics
+from hardware.can import VCICAN
 
 
+can = VCICAN()
+can.init_can()
 FREQ = 100  # Hz
-robot = GX7(FREQ, 'mit', soft_limit=False) # 初始化机器人，设置为MIT模式，不开启软关节限位检测
+robot =  GX7(can, can_channel=1, freq=FREQ, control_mode='mit', soft_limit=False) # 初始化机器人，设置为MIT模式，不开启软关节限位检测
 
 dt = 1/FREQ
 robot.setup()

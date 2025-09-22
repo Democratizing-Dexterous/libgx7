@@ -1,6 +1,6 @@
 import numpy as np
 
-from ik_solve import gx7_ik_solve, gx7_fk
+from .ik_solve import gx7_ik_solve, gx7_fk
 
 
 class Kinematics:

@@ -26,17 +26,25 @@ class ControlState:
 
 class Robot:
     def __init__(
-        self, can: VCICAN, can_channel=0, freq=100, control_mode="pvt", soft_limit=True
+        self,
+        can: VCICAN,
+        can_channel=0,
+        freq=100,
+        control_mode="pvt",
+        soft_limit=True,
+        config="gx7.yaml",
     ):
-        self.kin = Kinematics()
+
         self.freq = freq
 
         self.can = can
         self.can_channel = can_channel
 
-        self.robot_motors = RobotMotors(self.can, self.can_channel)
+        self.robot_motors = RobotMotors(self.can, self.can_channel, config)
         self.num_dof = self.robot_motors.num_motors
         self.motor_limits = self.robot_motors.motor_limits
+
+        self.kin = Kinematics(self.motor_limits)
 
         self.init_motors_status_params = [[0] * self.num_dof] * 8
         self.global_motors_status = MotorStatus(*self.init_motors_status_params)
@@ -419,14 +427,14 @@ class Robot:
                 loop_start = time.perf_counter()
                 # print(loop_start)
 
-                # if self.soft_limit:
-                #     # 判断关节限位
-                #     joints_valid, info = self.check_joint_limits()
-                #     if not joints_valid:
-                #         print(info)
-                #         robot_motors.disable_all()
-                #         self.running = False
-                #         break
+                if self.soft_limit:
+                    # 判断关节限位
+                    joints_valid, info = self.check_joint_limits()
+                    if not joints_valid:
+                        print(info)
+                        robot_motors.disable_all()
+                        self.running = False
+                        break
 
                 # 检查错误
                 error_free, info = self.check_error()

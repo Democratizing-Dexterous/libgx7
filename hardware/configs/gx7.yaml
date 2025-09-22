@@ -11,10 +11,38 @@ motor_types:
 robot_config:
   num_motors: 7
   motor_configs:
-    - dmj4340
-    - dmj4340
-    - dmj4340
-    - dmj4340
-    - dmj4310
-    - dmj4310
-    - dmj4310
+    - type: dmj4340
+      limits:
+        position:
+          lower: -120.0   # custom limit for this specific motor
+          upper: 120.0
+    - type: dmj4340
+      limits:
+        position:
+          lower: -20   # custom limit for this specific motor
+          upper: 210
+    - type: dmj4340
+      limits:
+        position:
+          lower: -120.0   # custom limit for this specific motor
+          upper: 120.0
+    - type: dmj4340
+      limits:
+        position:
+          lower: -10.0   # custom limit for this specific motor
+          upper: 180.0
+    - type: dmj4310
+      limits:
+        position:
+          lower: -90.0   # custom limit for this specific motor
+          upper: 90.0
+    - type: dmj4310
+      limits:
+        position:
+          lower: -120.0   # custom limit for this specific motor
+          upper: 120.0
+    - type: dmj4310
+      limits:
+        position:
+          lower: -90.0   # custom limit for this specific motor
+          upper: 90.0
