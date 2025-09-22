@@ -59,6 +59,11 @@ robot2 = GX7(can, can_channel=1, freq=FREQ, control_mode="pvt")
 
 关于7轴逆运动学求解的代码在`examples/sew_ik.py`中，代码演示了7轴逆解具有连续变化的过程，即不同臂角参数`psi`的变化，关节角度求解不一样，而末端位姿保持不变。
 
+## Robot API
+
+请参考[API文档](docs/api.md)。
+
+
 ## 注意事项
 
 * 代码退出后，机械臂会自动停止运动，在重力作用下会有阻力的下坠。
