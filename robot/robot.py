@@ -182,7 +182,9 @@ class Robot:
         self.global_motors_status.timestamps = [f["timestamp"] for f in feedbacks_all]
 
     def get_delay(self):
-        """unit: ms"""
+        """
+        get motors delay in unit ms.
+        """
         return [
             (time.perf_counter() - m) * 1000
             for m in self.global_motors_status.timestamps
@@ -191,15 +193,23 @@ class Robot:
     def fk(self, joint_positions):
         return self.kin.fk(joint_positions)
 
-    def ik(self, position, orientation=[0, 0, 0], psi=np.pi / 2):
-        return self.kin.ik(position, orientation, psi=psi)
+    def ik(
+        self,
+        position,
+        orientation=np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]),
+        psi=np.pi / 2,
+    ):
+        """
+        使用SEW计算逆解. psi为臂角参数
+        """
 
-    def jac(self, joint_positions):
-        return self.kin.jac(joint_positions)
+        position = np.array(position)
+
+        return self.kin.ik(position, orientation, psi=psi)
 
     def check_joint_limits(self):
         """
-        检查关节位置和速度是否超出限制
+        检查关节位置和速度是否超出限制.
         """
         jps = self.global_motors_status.positions
         for i, jp in enumerate(jps):
@@ -249,19 +259,19 @@ class Robot:
     ###############################
 
     def getJP(self):
-        return self.global_motors_status.positions
+        return np.array(self.global_motors_status.positions)
 
     def getJV(self):
-        return self.global_motors_status.velocities
+        return np.array(self.global_motors_status.velocities)
 
     def getJT(self):
-        return self.global_motors_status.torques
+        return np.array(self.global_motors_status.torques)
 
     def getRotorTemp(self):
-        return self.global_motors_status.temp_rotors
+        return np.array(self.global_motors_status.temp_rotors)
 
     def getMossTemp(self):
-        return self.global_motors_status.temp_moss
+        return np.array(self.global_motors_status.temp_moss)
 
     def get_status_summary(self):
         """
@@ -345,6 +355,9 @@ class Robot:
         self.pvt_control_torques = torques
 
     def setJPVT(self, id, position, velocity, torque):
+        """
+        set position (control goal), velocity (limit), torque (%, percentage, limit) for motor id (start from 1)
+        """
         self.pvt_control_positions[id - 1] = position
         self.pvt_control_velocities[id - 1] = velocity
         self.pvt_control_torques[id - 1] = torque
@@ -363,14 +376,14 @@ class Robot:
 
     def setJPVs(self, positions, velocities):
         """
-        set position (control goal), velocity (limit) for all motors
+        set positions (control goal), velocities (limit) for all motors
         """
         self.pv_control_positions = positions
         self.pv_control_velocities = velocities
 
     def setJPV(self, id, position, velocity):
         """
-        set position (control goal), velocity (limit) for all motors
+        set position (control goal), velocity (limit) for motor id
         """
         self.pv_control_positions[id - 1] = position
         self.pv_control_velocities[id - 1] = velocity
