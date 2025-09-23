@@ -1,6 +1,14 @@
 # Robot API 文档
 
 本文档介绍 `robot/robot.py` 中 `Robot` 类及相关方法的用途、参数与使用方法。
+---
+## 单位
+
+角度: Rad
+
+距离: m
+
+---
 
 ---
 
@@ -40,6 +48,7 @@ Robot(
 - `soft_limit`：是否启用关节软限位检测
 - `config`：机器人电机配置文件，在`hardware/configs/`目录下
 
+yaml文件中定义了关节的个数、型号、活动范围等。
 ---
 
 ### 运行控制
@@ -80,7 +89,7 @@ Robot(
 
 ### 运动学
 - `fk(joint_positions)`：正运动学（关节位置 → 末端位姿）
-- `ik(position, orientation, psi)`：逆运动学（末端位姿 → 关节位置）
+- `ik(position, orientation, psi)`：逆运动学（末端位姿 → 关节位置），返回可行（在关节可活动范围内）求解结果List。position为xyz，orientation为旋转矩阵$R^{3\times 3}$，psi为7轴机械臂的臂角（$-\pi$到$\pi$）参数。
 
 ---
 
@@ -93,14 +102,14 @@ Robot(
 ---
 
 ### PVT 模式接口
-- `setJPVT(id, position, velocity, torque)`：设定单关节位置、最大速度、最大力矩（百分比，1为最大力矩）
+- `setJPVT(id, position, velocity, torque)`：设定单关节目标位置、运动过程中最大速度、最大力矩（百分比，1为最大力矩）
 - `setJPVTs(positions, velocities, torques)`：批量设定
 - `pvt_cmd()`：发送 PVT 模式指令
 
 ---
 
 ### PV 模式接口
-- `setJPV(id, position, velocity)`：设定单关节位置、最大速度
+- `setJPV(id, position, velocity)`：设定单关节目标位置、运动过程中最大速度
 - `setJPVs(positions, velocities)`：批量设定
 - `pv_cmd()`：发送 PV 模式指令
 
@@ -117,3 +126,6 @@ Robot(
 
 ---
 
+## 注意
+
+* id 从编号1开始
