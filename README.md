@@ -42,7 +42,7 @@ from hardware.can import VCICAN
 can = VCICAN()
 can.init_can()
 FREQ = 200  # Hz
-robot = GX7(can, can_channel=1, freq=FREQ, control_mode="pvt") # 如果使用CAN2通道连接机械臂，can_channel=1
+robot = GX7(can, can_channel=1, freq=FREQ, control_mode="pvt", soft_limits=True, config='gx7.yaml') # 如果使用CAN2通道连接机械臂，can_channel=1
 robot.setup()
 robot.run()  # Start the robot thread
 ```
@@ -54,6 +54,13 @@ robot1 = GX7(can, can_channel=0, freq=FREQ, control_mode="pvt")
 robot2 = GX7(can, can_channel=1, freq=FREQ, control_mode="pvt")
 ```
 
+如果是带夹爪版本的GX7，则按照如下进行初始化:
+
+```python
+robot = GX7(can, can_channel=1, freq=FREQ, control_mode="pvt", soft_limits=True, config='gx7-gripper.yaml')
+```
+
+注意夹爪本质（id=8）上也是一个转动关节，兼容`getJP`、`setJPVT`、`setJPVTs`等方法。
 
 ## 逆运动学示例
 

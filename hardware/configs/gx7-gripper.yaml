@@ -1,0 +1,53 @@
+motor_types:
+  dmj4310:
+    pmax: 12.5  
+    vmax: 30.0 
+    tmax: 10.0  
+  dmj4340:
+    pmax: 12.5  
+    vmax: 10.0 
+    tmax: 28.0  
+
+robot_config:
+  num_motors: 8
+  motor_configs:
+    - type: dmj4340
+      limits:
+        position:
+          lower: -120.0   # custom limit for this specific motor
+          upper: 120.0
+    - type: dmj4340
+      limits:
+        position:
+          lower: -20   # custom limit for this specific motor
+          upper: 210
+    - type: dmj4340
+      limits:
+        position:
+          lower: -120.0   # custom limit for this specific motor
+          upper: 120.0
+    - type: dmj4340
+      limits:
+        position:
+          lower: -10.0   # custom limit for this specific motor
+          upper: 180.0
+    - type: dmj4310
+      limits:
+        position:
+          lower: -90.0   # custom limit for this specific motor
+          upper: 90.0
+    - type: dmj4310
+      limits:
+        position:
+          lower: -120.0   # custom limit for this specific motor
+          upper: 120.0
+    - type: dmj4310
+      limits:
+        position:
+          lower: -90.0   # custom limit for this specific motor
+          upper: 90.0
+    - type: dmj4310
+      limits:
+        position:
+          lower: 0   # custom limit for this specific motor, gripper
+          upper: 90.0
