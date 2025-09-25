@@ -7,11 +7,12 @@ tactile = TactileSerial(port="/dev/ttyACM0")
 
 tactile.init()
 
+tactile.start()
+
 while True:
-    data = tactile.read_forces()
-    if data["valid"]:
-        print("Tactile 1 All Forces:", data["tac_allforces1"])
-        print("Tactile 2 All Forces:", data["tac_allforces2"])
-        cv2.imshow("Tactile Image", data["tac_img"])
-        cv2.waitKey(1)
+
+    # print("Tactile 1 All Forces:", tactile.all_forces1)
+    # print("Tactile 2 All Forces:", tactile.all_forces2)
+    cv2.imshow("Tactile Image", tactile.tactile_image)
+    cv2.waitKey(1)
     time.sleep(0.01)
