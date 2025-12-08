@@ -267,6 +267,9 @@ class Robot:
     def getJT(self):
         return np.array(self.global_motors_status.torques)
 
+    def getJTimestamp(self):
+        return np.array(self.global_motors_status.timestamps)
+
     def getRotorTemp(self):
         return np.array(self.global_motors_status.temp_rotors)
 
