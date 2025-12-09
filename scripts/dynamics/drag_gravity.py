@@ -26,14 +26,27 @@ robot.run()
 beta = np.load("ls_id_beta.npy")
 dynamics_regressor = CalcDynamics()
 
+# press s to save current position into data/points.csv
+
+csv_filename = f"data/points.csv"
 
 
-while True:
-    positions = robot.getJP()
-    velocities = robot.getJV()
+with open(csv_filename, mode="w", newline="") as file:
+    writer = csv.writer(file)
 
-    regressor = dynamics_regressor.calc(positions, velocities * 0, np.zeros(7))
+    while True:
+        positions = robot.getJP()
+        velocities = robot.getJV()
 
-    tau = regressor @ beta
+        regressor = dynamics_regressor.calc(positions, velocities * 0, np.zeros(7))
 
-    robot.setJTs(tau.ravel().tolist())
+        tau = regressor @ beta
+
+        robot.setJTs(tau.ravel().tolist())
+
+        # check keybard
+        key = cv2.waitKey(1)
+        print(f'key: {key}')
+        if cv2.waitKey(1) != -1:
+            writer.writerow(positions)
+            print(f"save {positions}")

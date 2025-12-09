@@ -1,5 +1,11 @@
 #include <math.h>
 
+double sigmoid(double x)
+{
+    return 2.0 / (1.0 + exp(-10*x)) - 1;
+}
+
+
 void H_func(double *regressor, const double *q, const double *dq, const double *ddq)
 {
     double x0 = q[1] + 1.5707963;
@@ -1231,7 +1237,7 @@ void H_func(double *regressor, const double *q, const double *dq, const double *
     regressor[9] = 0;
     regressor[10] = ddq[0];
     regressor[11] = dq[0];
-    regressor[12] = (((dq[0]) > 0) - ((dq[0]) < 0));
+    regressor[12] = sigmoid(dq[0]); //(((dq[0]) > 0) - ((dq[0]) < 0));
     regressor[13] = 1;
     regressor[14] = 1.0 * x1 * x9 + 1.0 * x11 * x4 + 6.1634385226994593e-16 * x7;
     regressor[15] = 1.0 * x1 * (x16 + x17) + 6.1634385226994593e-16 * x15 + 1.0 * x19 * x4;
@@ -1343,7 +1349,7 @@ void H_func(double *regressor, const double *q, const double *dq, const double *
     regressor[121] = 0;
     regressor[122] = ddq[1];
     regressor[123] = dq[1];
-    regressor[124] = (((dq[1]) > 0) - ((dq[1]) < 0));
+    regressor[124] = sigmoid(dq[1]); //(((dq[1]) > 0) - ((dq[1]) < 0));
     regressor[125] = 1;
     regressor[126] = x61;
     regressor[127] = x74;
@@ -1455,7 +1461,7 @@ void H_func(double *regressor, const double *q, const double *dq, const double *
     regressor[233] = 0;
     regressor[234] = ddq[2];
     regressor[235] = dq[2];
-    regressor[236] = (((dq[2]) > 0) - ((dq[2]) < 0));
+    regressor[236] = sigmoid(dq[2]); //(((dq[2]) > 0) - ((dq[2]) < 0));
     regressor[237] = 1;
     regressor[238] = x162;
     regressor[239] = x181;
@@ -1567,7 +1573,7 @@ void H_func(double *regressor, const double *q, const double *dq, const double *
     regressor[345] = 0;
     regressor[346] = ddq[3];
     regressor[347] = dq[3];
-    regressor[348] = (((dq[3]) > 0) - ((dq[3]) < 0));
+    regressor[348] = sigmoid(dq[3]); //(((dq[3]) > 0) - ((dq[3]) < 0));
     regressor[349] = 1;
     regressor[350] = x343;
     regressor[351] = x365;
@@ -1679,7 +1685,7 @@ void H_func(double *regressor, const double *q, const double *dq, const double *
     regressor[457] = 0;
     regressor[458] = ddq[4];
     regressor[459] = dq[4];
-    regressor[460] = (((dq[4]) > 0) - ((dq[4]) < 0));
+    regressor[460] = sigmoid(dq[4]); //(((dq[4]) > 0) - ((dq[4]) < 0));
     regressor[461] = 1;
     regressor[462] = x582;
     regressor[463] = x607;
@@ -1791,7 +1797,7 @@ void H_func(double *regressor, const double *q, const double *dq, const double *
     regressor[569] = 0;
     regressor[570] = ddq[5];
     regressor[571] = dq[5];
-    regressor[572] = (((dq[5]) > 0) - ((dq[5]) < 0));
+    regressor[572] = sigmoid(dq[5]); //(((dq[5]) > 0) - ((dq[5]) < 0));
     regressor[573] = 1;
     regressor[574] = x879;
     regressor[575] = x906;
@@ -1903,7 +1909,7 @@ void H_func(double *regressor, const double *q, const double *dq, const double *
     regressor[681] = 0;
     regressor[682] = ddq[6];
     regressor[683] = dq[6];
-    regressor[684] = (((dq[6]) > 0) - ((dq[6]) < 0));
+    regressor[684] = sigmoid(dq[6]); //(((dq[6]) > 0) - ((dq[6]) < 0));
     regressor[685] = 1;
     //
     return;

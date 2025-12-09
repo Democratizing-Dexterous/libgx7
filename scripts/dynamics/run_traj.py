@@ -25,7 +25,7 @@ robot.run()
 
 points = np.loadtxt("data/traj_p.csv", delimiter=",")
 
-points = points[int(0.15 * len(points)) : int(0.95 * len(points)), :]
+points = points[6*FREQ : -6*FREQ , :]
 
 # ===============================
 # 先运动到第一个点（安全过渡）

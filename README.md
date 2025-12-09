@@ -75,6 +75,9 @@ robot = GX7(can, can_channel=1, freq=FREQ, control_mode="pvt", soft_limits=True,
 
 请参考[API文档](docs/api.md)。
 
+## 动力学辨识
+
+请参考[动力学辨识](scripts/dynamics/readme.md)。
 
 ## 注意事项
 
