@@ -1,2 +1,2 @@
-from hardware import VCICAN
-from robot import GX7
+from .hardware import VCICAN
+from .robot import GX7
