@@ -7,9 +7,9 @@ from dataclasses import dataclass
 import numpy as np
 import threading
 
-from hardware import VCICAN, RobotMotors
-from utils.utils import precise_sleep
-from utils.utils import MotorStatus
+from libgx7.hardware import VCICAN, RobotMotors
+from libgx7.utils.utils import precise_sleep
+from libgx7.utils.utils import MotorStatus
 
 from .kinematics import Kinematics
 
