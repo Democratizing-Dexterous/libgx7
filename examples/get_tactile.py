@@ -1,4 +1,4 @@
-from hardware.ser import TactileSerial
+from libgx7.hardware.ser import TactileSerial
 import cv2
 import time
 

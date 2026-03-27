@@ -2,9 +2,8 @@ import numpy as np
 import time
 import sys
 
-sys.path.append("../")
-from robot import GX7
-from hardware.can import VCICAN
+from libgx7 import VCICAN, GX7
+
 
 
 can = VCICAN()

@@ -3,9 +3,7 @@ import time
 import sys
 import csv
 
-sys.path.append("../../")  # 根据你的目录结构修改
-from robot import GX7
-from hardware.can import VCICAN
+from libgx7 import VCICAN, GX7
 
 # 初始化 CAN
 can = VCICAN()

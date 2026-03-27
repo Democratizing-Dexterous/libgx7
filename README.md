@@ -5,6 +5,12 @@
 * Ubuntu 20.04、22.04
 * Python 3.8+
 
+## 安装方式
+
+```
+pip install -e .
+```
+
 ## USB2CAN权限设置
 执行如下代码设置USB2CAN权限，然后重新拔插USB或者重启：
 ```

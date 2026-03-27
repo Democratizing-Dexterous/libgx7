@@ -5,10 +5,10 @@ import csv
 from datetime import datetime
 import numpy as np
 
-sys.path.append("../../")
-from robot import GX7
-from robot.dynamics.gx7.calc_dynamics import CalcDynamics
-from hardware.can import VCICAN
+
+
+from libgx7 import VCICAN, GX7
+from libgx7.robot.dynamics.gx7 import CalcDynamics
 
 # ===============================
 # 初始化 CAN 和机器人

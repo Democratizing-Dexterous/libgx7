@@ -4,9 +4,7 @@ import sys
 import csv
 from datetime import datetime
 
-sys.path.append("../../")
-from robot import GX7
-from hardware.can import VCICAN
+from libgx7 import VCICAN, GX7
 
 # ===============================
 # 初始化 CAN 和机器人

@@ -1,6 +1,5 @@
 import numpy as np
-from robot import GX7
-from hardware.can import VCICAN
+from libgx7 import VCICAN, GX7
 
 
 can = VCICAN()
