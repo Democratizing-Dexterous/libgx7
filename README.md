@@ -35,8 +35,7 @@ pip install -e .
 首次使用 USB2CAN 前，请执行以下命令配置设备权限。执行完成后，**重新拔插 USB 设备**，或**重启系统**使配置生效。
 
 ```bash
-cd libgx7
-sudo cp hardware/99-myusb.rules /etc/udev/rules.d/
+sudo cp libgx7/hardware/99-myusb.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
