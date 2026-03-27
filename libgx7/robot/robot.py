@@ -143,7 +143,7 @@ class Robot:
         else:
             # 从mit切换到pvt，先获取切换前位置，然后设置PVT控制位保持当前位置
             positions = self.getJP()
-            self.setJPVTs(positions, [0] * len(positions), [0.6] * len(positions))
+            self.setJPVTs(positions, [0.2] * len(positions), [0.6] * len(positions))
 
             # 先复制prev control state
             self.control_state.prev_control_state = (
