@@ -10,6 +10,23 @@ from std_srvs.srv import Trigger, SetBool
 from libgx7 import VCICAN, GX7
 from libgx7.robot.robot import MODE_MIT, MODE_PV, MODE_PVT
 
+"""
+# 查询模式
+ros2 service call /gx7/mode std_srvs/srv/Trigger "{}"
+
+# 切 PVT
+ros2 service call /gx7/set_pvt std_srvs/srv/SetBool "{data: true}"
+
+# 切 MIT
+ros2 service call /gx7/set_mit std_srvs/srv/SetBool "{data: true}"
+
+# 切 PV
+ros2 service call /gx7/set_pv std_srvs/srv/SetBool "{data: true}"
+
+# 查看发布
+ros2 topic echo /gx7/joints_published
+"""
+
 
 class GX7Ros2Node(Node):
     def __init__(self):
