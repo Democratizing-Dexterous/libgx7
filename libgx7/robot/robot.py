@@ -43,6 +43,7 @@ class Robot:
         self.robot_motors = RobotMotors(self.can, self.can_channel, config)
         self.num_dof = self.robot_motors.num_motors
         self.motor_limits = self.robot_motors.motor_limits
+        self.motor_ids = self.robot_motors.motor_ids
 
         self.kin = Kinematics(self.motor_limits)
 
@@ -297,7 +298,7 @@ class Robot:
         summary += "MOSFET Temperatures: " + str(moss_temps) + "\n"
 
         # Add end effector position if joint positions are available
-        if positions and len(positions) >= 6:
+        if len(positions) >= 6:
             try:
                 ee_pos = self.fk(positions)
                 summary += "End Effector Position: " + str(ee_pos) + "\n"
@@ -336,7 +337,7 @@ class Robot:
         self.mit_control_kds = [0] * len(torques)
 
     def mit_cmd(self):
-        ids = list(np.arange(1, self.num_dof + 1))
+        ids = self.motor_ids
         poss = self.mit_control_positions
         vels = self.mit_control_velocities
         torques = self.mit_control_torques
@@ -366,7 +367,7 @@ class Robot:
         self.pvt_control_torques[id - 1] = torque
 
     def pvt_cmd(self):
-        ids = list(np.arange(1, self.num_dof + 1))
+        ids = self.motor_ids
         poss = self.pvt_control_positions
         vels = self.pvt_control_velocities
         torques = self.pvt_control_torques
@@ -392,7 +393,7 @@ class Robot:
         self.pv_control_velocities[id - 1] = velocity
 
     def pv_cmd(self):
-        ids = list(np.arange(1, self.num_dof + 1))
+        ids = self.motor_ids
         poss = self.pv_control_positions
         vels = self.pv_control_velocities
 
