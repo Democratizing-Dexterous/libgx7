@@ -49,7 +49,7 @@ class Robot:
 
         self.kin = Kinematics(self.motor_limits)
 
-        self.init_motors_status_params = [[0] * self.num_dof] * 8
+        self.init_motors_status_params = [[0] * self.num_dof for _ in range(8)]
         self.global_motors_status = MotorStatus(*self.init_motors_status_params)
 
         ##############
@@ -174,15 +174,31 @@ class Robot:
         return self.global_motors_status
 
     def update_status(self, feedbacks_all):
-        # global_motors_status is global and need to be modified
-        self.global_motors_status.ids = [f["id"] for f in feedbacks_all]
-        self.global_motors_status.states = [f["state"] for f in feedbacks_all]
-        self.global_motors_status.positions = [f["position"] for f in feedbacks_all]
-        self.global_motors_status.velocities = [f["velocity"] for f in feedbacks_all]
-        self.global_motors_status.torques = [f["torque"] for f in feedbacks_all]
-        self.global_motors_status.temp_moss = [f["temp_mos"] for f in feedbacks_all]
-        self.global_motors_status.temp_rotors = [f["temp_rotor"] for f in feedbacks_all]
-        self.global_motors_status.timestamps = [f["timestamp"] for f in feedbacks_all]
+        """
+        Update global motor status in-place to avoid per-cycle list allocations.
+        This reduces GC pressure in high-frequency control loops.
+        """
+        status = self.global_motors_status
+
+        ids = status.ids
+        states = status.states
+        positions = status.positions
+        velocities = status.velocities
+        torques = status.torques
+        temp_moss = status.temp_moss
+        temp_rotors = status.temp_rotors
+        timestamps = status.timestamps
+
+        # Keep object identity and mutate preallocated lists in place.
+        for i, f in enumerate(feedbacks_all):
+            ids[i] = f["id"]
+            states[i] = f["state"]
+            positions[i] = f["position"]
+            velocities[i] = f["velocity"]
+            torques[i] = f["torque"]
+            temp_moss[i] = f["temp_mos"]
+            temp_rotors[i] = f["temp_rotor"]
+            timestamps[i] = f["timestamp"]
 
     def get_delay(self):
         """
