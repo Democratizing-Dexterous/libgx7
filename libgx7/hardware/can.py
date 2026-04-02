@@ -321,6 +321,27 @@ class VCICAN:
         return data
 
 
+    def read_timeout(self, can_channel, id, max_retry=20):
+        timeout = 0
+        for i in range(max_retry):
+            feedback_frame = self.send_frame(can_channel, 0x7FF, [id, 0x00, 0x33, 0x09] + [0x00] * 4)
+            if feedback_frame[0] == id:  # match
+                timeout = int.from_bytes(feedback_frame[4:8], byteorder="little")
+                break
+            time.sleep(0.1)
+        return timeout
+    
+    def write_timeout(self, can_channel, id, timeout, max_retry=20):
+        timeout = int.to_bytes(timeout, 4, byteorder="little")
+        data = 0
+        for i in range(max_retry):
+            feedback_frame = self.send_frame(can_channel, 0x7FF, [id, 0x00, 0x55, 0x09] + list(timeout))
+            if feedback_frame[0] == id:  # match
+                data = int.from_bytes(feedback_frame[4:8], byteorder="little")
+                break
+            time.sleep(0.1)
+        return data
+
 if __name__ == "__main__":
     can = VCICAN(device_serial_number='31F10002CCE')
     can.find_devices()
