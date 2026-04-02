@@ -79,11 +79,12 @@ USB2CAN 设备包含两个 CAN 通道，外壳上标记为：
 
 ## 🚀 快速开始
 
-### 基础初始化示例
+### 基础初始化示例（轻量计算任务）
 
 ```python
 import numpy as np
 from libgx7 import VCICAN, GX7
+import time
 
 can = VCICAN()
 can.init_can()
@@ -102,8 +103,35 @@ robot = GX7(
 )
 
 robot.setup()
-robot.run()  # Start the robot thread
+robot.run()   # 启动机器人内部控制线程
+
+#⚠️说明：
+# 适合处理轻量级业务逻辑，复杂计算会导致run线程波动变大，影响控制实时性
+
+while True:
+  robot.setJPVTs([0]*7, [0.2]*7, [0.6]*7) #控制到0位，0.2速度，60%最大力矩
+
+  #⚠️重要：这里的 setJPVTs 只是更新目标指令，实际发送频率由 robot.run() 内部控制循环决定。
+  # 如果外部 while True 不加 sleep，会形成忙等，CPU 占用飙升，并影响线程调度稳定性，会造成关节通信丢失
+  time.sleep(1 / FREQ)
+
 ```
+
+### ROS2 节点启动（推荐用于系统集成）
+
+当需要与 ROS2 生态（话题、服务、TF、可视化等）集成时，使用项目内置节点：
+
+```bash
+python gx7_ros2_node.py
+```
+
+> 建议在运行前确认：
+> 1. USB2CAN 权限已按本文前文配置；
+> 2. `can_channel` 与实际硬件连接一致；
+> 3. 配置文件选择正确（`gx7.yaml` 或 `gx7-gripper.yaml`）。
+>
+> 若你使用标准 ROS2 工作流，可进一步封装为 launch 启动，便于统一管理日志与参数。
+
 
 ---
 
