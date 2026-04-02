@@ -45,6 +45,8 @@ class Robot:
         self.motor_limits = self.robot_motors.motor_limits
         self.motor_ids = self.robot_motors.motor_ids
 
+        self.id_to_index = {motor_id: i for i, motor_id in enumerate(self.motor_ids)}
+
         self.kin = Kinematics(self.motor_limits)
 
         self.init_motors_status_params = [[0] * self.num_dof] * 8
@@ -311,11 +313,19 @@ class Robot:
     ### MIT Mode ##################
     ###############################
 
+    def _get_index_by_id(self, id):
+        if id not in self.id_to_index:
+            raise ValueError(
+                f"Motor id {id} not found in config. Available ids: {self.motor_ids}"
+            )
+        return self.id_to_index[id]
+
     def setJP(self, id, position):
-        self.mit_control_positions[id - 1] = position
-        self.mit_control_velocities[id - 1] = 0
-        self.mit_control_kps[id - 1] = 10
-        self.mit_control_kds[id - 1] = 2
+        idx = self._get_index_by_id(id)
+        self.mit_control_positions[idx] = position
+        self.mit_control_velocities[idx] = 0
+        self.mit_control_kps[idx] = 10
+        self.mit_control_kds[idx] = 2
 
     def setJPs(self, positions):
         """
@@ -360,11 +370,12 @@ class Robot:
 
     def setJPVT(self, id, position, velocity, torque):
         """
-        set position (control goal), velocity (limit), torque (%, percentage, limit) for motor id (start from 1)
+        set position (control goal), velocity (limit), torque (%, percentage, limit) for motor id
         """
-        self.pvt_control_positions[id - 1] = position
-        self.pvt_control_velocities[id - 1] = velocity
-        self.pvt_control_torques[id - 1] = torque
+        idx = self._get_index_by_id(id)
+        self.pvt_control_positions[idx] = position
+        self.pvt_control_velocities[idx] = velocity
+        self.pvt_control_torques[idx] = torque
 
     def pvt_cmd(self):
         ids = self.motor_ids
@@ -389,8 +400,9 @@ class Robot:
         """
         set position (control goal), velocity (limit) for motor id
         """
-        self.pv_control_positions[id - 1] = position
-        self.pv_control_velocities[id - 1] = velocity
+        idx = self._get_index_by_id(id)
+        self.pv_control_positions[idx] = position
+        self.pv_control_velocities[idx] = velocity
 
     def pv_cmd(self):
         ids = self.motor_ids
