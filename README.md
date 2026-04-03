@@ -16,7 +16,7 @@
 ## 🧰 运行环境
 
 - Ubuntu 20.04 / 22.04
-- Python 3.8+
+- Python 3.8+ （与ROS2集成使用Python 3.10）
 
 ---
 
@@ -79,6 +79,39 @@ USB2CAN 设备包含两个 CAN 通道，外壳上标记为：
 
 ## 🚀 快速开始
 
+### 交互式 CLI（推荐用于快速调试）
+
+项目提供了一个交互式入口脚本 [`cli.py`](cli.py)。
+推荐通过 Python 交互模式启动，这样初始化完成后不会退出，你可以直接在终端里调用 `robot.xxx(...)`：
+
+```bash
+python -i cli.py
+```
+
+启动成功后，会预先创建并启动以下对象：
+
+- `can`：`VCICAN` 实例（已 `init_can()`）
+- `robot`：`GX7` 实例（已 `setup()` 且已 `run()`）
+- `FREQ`：控制频率（默认 `100` Hz）
+
+你可以直接输入命令控制机械臂，例如：
+
+```python
+# 查看当前关节位置
+robot.getJP()
+
+# 发送 7 轴 PVT 目标（位置/速度/力矩比例）
+robot.setJPVTs([0, 0, 0, 0, 0, 0, 0], [0.2]*7, [0.6]*7)
+
+# 单关节控制示例（按你实际 API 使用）
+# robot.setJPVT(joint_id, pos, vel, tau_ratio)
+```
+
+> ⚠️ 注意
+> 1. `python cli.py` 与 `python -i cli.py` 不同：前者脚本执行完会退出，后者会保留交互终端。
+> 2. 交互调试时避免“无 sleep 的死循环”疯狂发指令，防止 CPU 占用过高影响线程调度与通信稳定性。
+> 3. 退出前建议先让机械臂回到安全姿态或停止输出，再 `Ctrl-D` / `exit()` 退出。
+
 ### 基础初始化示例（轻量计算任务）
 
 ```python
@@ -116,6 +149,8 @@ while True:
   time.sleep(1 / FREQ)
 
 ```
+
+如果需要进行视觉感知等复杂计算进行机械臂控制，建议使用ROS2进行集成。
 
 ### ROS2 节点启动（推荐用于系统集成）
 
@@ -156,6 +191,20 @@ python gx7_ros2_node.py --ros-args \
 ```
 
 > `topic_prefix` 支持自定义命名空间，例如 `/my_arm`，便于多机械臂系统集成。
+
+#### Python ROS2 控制示例位置
+
+项目提供了一个最简 Python ROS2 控制示例：
+
+- [`scripts/ros2_control_demo.py`](scripts/ros2_control_demo.py)
+
+该示例演示了完整流程：订阅状态、切换到 PVT、发布 `joints_goal` 控制并打印关节角度、查询当前 mode。
+
+运行方式（先启动 `gx7_ros2_node.py`）：
+
+```bash
+python scripts/ros2_control_demo.py --ros-args -p topic_prefix:=/gx7
+```
 
 #### ROS2 接口说明
 
@@ -267,10 +316,11 @@ robot = GX7(
 
 ## 🧠 逆运动学示例
 
-7 轴逆运动学示例代码位于：
+7 轴逆运动学示例代码位于[`scripts/sew_ik.py`](scripts/sew_ik.py)
+：
 
 ```bash
-examples/sew_ik.py
+python scripts/sew_ik.py
 ```
 
 该示例演示了 **7 轴机械臂逆解的连续变化过程**：
@@ -278,7 +328,7 @@ examples/sew_ik.py
 
 逆运动学解析解代码移植自：
 
-- [sew_ik](https://github.com/rpiRobotics/stereo-sew)
+- [https://github.com/rpiRobotics/stereo-sew](https://github.com/rpiRobotics/stereo-sew)
 
 下图展示了：**相同末端位姿下，不同 `psi` 对应的不同关节状态**。
 
