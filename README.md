@@ -129,9 +129,104 @@ python gx7_ros2_node.py
 > 1. USB2CAN 权限已按本文前文配置；
 > 2. `can_channel` 与实际硬件连接一致；
 > 3. 配置文件选择正确（`gx7.yaml` 或 `gx7-gripper.yaml`）。
->
-> 若你使用标准 ROS2 工作流，可进一步封装为 launch 启动，便于统一管理日志与参数。
 
+#### ROS2 参数
+
+`gx7_ros2_node.py` 支持以下参数（可通过 `--ros-args -p` 传入）：
+
+- `can_channel`（int，默认 `1`）：USB2CAN 通道，`0` 对应 CAN1，`1` 对应 CAN2
+- `freq`（int，默认 `100`）：机器人内部控制线程频率（Hz）
+- `control_mode`（str，默认 `pvt`）：初始控制模式，支持 `pvt` / `pv` / `mit`
+- `soft_limit`（bool，默认 `False`）：是否启用关节软限位检查
+- `config`（str，默认 `gx7.yaml`）：机械臂配置文件
+- `publish_rate`（float，默认 `100.0`）：状态发布频率（Hz）
+- `topic_prefix`（str，默认 `/gx7`）：ROS2 话题/服务前缀
+
+示例：
+
+```bash
+python gx7_ros2_node.py --ros-args \
+  -p can_channel:=1 \
+  -p freq:=100 \
+  -p control_mode:=pvt \
+  -p soft_limit:=false \
+  -p config:=gx7.yaml \
+  -p publish_rate:=100.0 \
+  -p topic_prefix:=/gx7
+```
+
+> `topic_prefix` 支持自定义命名空间，例如 `/my_arm`，便于多机械臂系统集成。
+
+#### ROS2 接口说明
+
+以下接口默认以 `topic_prefix=/gx7` 为例；若你修改前缀（如 `/my_arm`），请将所有 `/gx7/...` 替换为 `/my_arm/...`。
+
+**1) 状态发布 Topic**
+
+- `/gx7/joints_published`（`sensor_msgs/msg/JointState`）
+  - `position`：关节位置（rad）
+  - `velocity`：关节速度（rad/s）
+  - `effort`：关节力矩（Nm）
+
+查看：
+
+```bash
+ros2 topic echo /gx7/joints_published
+```
+
+**2) 目标命令 Topic（统一入口）**
+
+- `/gx7/joints_goal`（`sensor_msgs/msg/JointState`）
+
+该话题根据当前控制模式自动解释消息字段：
+
+- 当前模式 `MIT`：使用 `effort` 作为力矩命令（长度需等于 DOF）
+- 当前模式 `PV`：使用 `position` + `velocity`
+- 当前模式 `PVT`：使用 `position` + `velocity` + `effort`
+
+> 建议始终发送完整长度的 `position/velocity/effort` 数组（长度均为关节数），避免因模式切换导致字段缺失。
+
+发布示例（7 轴）：
+
+```bash
+ros2 topic pub /gx7/joints_goal sensor_msgs/msg/JointState "{
+  position: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  velocity: [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2],
+  effort:   [0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6]
+}"
+```
+
+**3) 模式相关 Service**
+
+- `/gx7/mode`（`std_srvs/srv/Trigger`）
+  - 返回当前模式字符串（`pvt` / `pv` / `mit`）
+
+- `/gx7/set_pvt`（`std_srvs/srv/SetBool`）
+- `/gx7/set_mit`（`std_srvs/srv/SetBool`）
+- `/gx7/set_pv`（`std_srvs/srv/SetBool`）
+
+以上三个切换服务均为：`data=true` 时执行切换；`data=false` 不切换并返回失败信息。
+
+调用示例：
+
+```bash
+# 查询模式
+ros2 service call /gx7/mode std_srvs/srv/Trigger "{}"
+
+# 切换模式
+ros2 service call /gx7/set_pvt std_srvs/srv/SetBool "{data: true}"
+ros2 service call /gx7/set_mit std_srvs/srv/SetBool "{data: true}"
+ros2 service call /gx7/set_pv  std_srvs/srv/SetBool "{data: true}"
+```
+
+#### 推荐控制流程
+
+1. 启动节点并确认 `/gx7/joints_published` 正常发布
+2. 调用 `/gx7/set_xxx` 切换到目标模式
+3. 通过 `/gx7/joints_goal` 连续发布控制命令
+4. 用 `/gx7/mode` 与 `/gx7/joints_published` 做运行时校验
+
+> 若你使用标准 ROS2 工作流，可进一步封装为 launch 启动，便于统一管理日志与参数。
 
 ---
 
