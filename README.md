@@ -337,8 +337,9 @@ python scripts/sew_ik.py
 </div>
 
 <div align="center">
-  <img src="assets/gx7_ik.gif" alt="逆运动学" width="85%">
+  <img src="assets/gx7_ik.gif" alt="逆运动学" width="60%">
 </div>
+
 ---
 
 ## 📚 文档
